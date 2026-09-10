@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hypirk Retrieval Report Viewer</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#f8f9fb; --text:#20242b; --muted:#68707c;
+    --line:#dfe3e8; --strong:#343a46; --accent:#53657c; --accent2:#7c8da5; --good:#3e765e; --warn:#8a6b34; --bad:#8a4d4d;
+    --shadow:0 8px 28px rgba(25,32,45,.08); --radius:16px; --radius-sm:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#15171b;--panel:#1d2026;--panel2:#23272e;--text:#eef1f5;--muted:#a8b0bb;--line:#353b45;--strong:#f1f3f6;--accent:#9aaac0;--accent2:#75879f;--good:#85b79e;--warn:#d0ad71;--bad:#d49595;--shadow:none}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;line-height:1.45}
+  button,input,select{font:inherit;color:inherit}
+  .wrap{max-width:1480px;margin:0 auto;padding:22px}
+  header{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+  h1{font-size:24px;margin:0 0 5px;letter-spacing:-.02em} h2{font-size:17px;margin:0} h3{font-size:14px;margin:0}
+  .sub{color:var(--muted);font-size:13px;max-width:820px}
+  .drop{border:1.5px dashed var(--accent2);background:var(--panel);border-radius:var(--radius);padding:20px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:var(--shadow);margin-bottom:18px}
+  .drop.drag{outline:3px solid color-mix(in srgb,var(--accent) 25%, transparent)}
+  .drop strong{display:block;margin-bottom:4px}.drop small{color:var(--muted)}
+  .btn{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:8px 12px;cursor:pointer}.btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .hidden{display:none!important}
+  .notice{padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);font-size:12px;color:var(--muted);margin-bottom:14px}
+  .notice b{color:var(--text)}
+  .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;margin-bottom:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px;min-width:0}
+  .span12{grid-column:span 12}.span8{grid-column:span 8}.span7{grid-column:span 7}.span6{grid-column:span 6}.span5{grid-column:span 5}.span4{grid-column:span 4}.span3{grid-column:span 3}
+  @media(max-width:1000px){.span8,.span7,.span6,.span5,.span4,.span3{grid-column:span 12}.wrap{padding:13px}header{display:block}}
+  .kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:620px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}.kpi .v{font-size:22px;font-weight:750;letter-spacing:-.03em}.kpi .l{font-size:11px;color:var(--muted);margin-top:2px}
+  .sectionHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}.sectionHead .desc{font-size:11px;color:var(--muted)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar select,.toolbar input{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:6px 8px}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}th,td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:650;z-index:1}tr:hover td{background:var(--panel2)}
+  .tableWrap{overflow:auto;max-height:460px;border:1px solid var(--line);border-radius:11px}
+  .tag{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10px;background:var(--panel2)}
+  .selected{font-weight:750;color:var(--good)}.muted{color:var(--muted)}
+  .chart{width:100%;min-height:220px}.chart svg{display:block;width:100%;height:auto;overflow:visible}.axis{stroke:var(--line);stroke-width:1}.bar{fill:var(--accent2)}.bar2{fill:var(--accent)}.dot{fill:var(--accent)}.line{fill:none;stroke:var(--accent);stroke-width:2}.label{fill:var(--muted);font-size:10px}.chartTitle{font-weight:700;font-size:12px;margin-bottom:8px}
+  .metricRows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media(max-width:700px){.metricRows{grid-template-columns:1fr}}
+  .metric{border:1px solid var(--line);border-radius:11px;padding:10px;background:var(--panel2)}.metric .name{font-size:11px;color:var(--muted)}.metric .num{font-size:17px;font-weight:720;margin-top:3px}.metric .note{font-size:10px;color:var(--muted);margin-top:2px}
+  .heat{display:inline-block;min-width:58px;padding:2px 5px;border-radius:5px;text-align:right}
+  details{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:9px 11px}details+details{margin-top:8px}summary{cursor:pointer;font-weight:650}
+  pre{white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);max-height:420px;overflow:auto}
+  .empty{padding:34px 12px;text-align:center;color:var(--muted)}
+  .signalGrid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:8px;overflow:auto}.signalBox{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2)}.signalBox .big{font-size:18px;font-weight:750}.signalBox small{color:var(--muted)}
+  .traceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}@media(max-width:820px){.traceGrid{grid-template-columns:1fr}}
+  .traceCard{border:1px solid var(--line);border-radius:11px;padding:10px;background:var(--panel);min-width:0}.traceCard+.traceCard{margin-top:8px}
+  .traceHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;font-size:12px;font-weight:700}.traceMeta{font-size:10px;color:var(--muted);margin-top:3px}
+  .traceFormula{padding:8px 10px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);font-size:11px;font-weight:650;margin:8px 0}
+  .traceText{white-space:pre-wrap;word-break:break-word;border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:9px;font-size:11px;color:var(--text);max-height:260px;overflow:auto;margin:7px 0}
+  .traceQuery{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(250px,1.8fr) auto;gap:9px;align-items:start;padding:7px 0;border-bottom:1px solid var(--line);font-size:11px}.traceQuery:last-child{border-bottom:0}.traceQuery .qmeta{color:var(--muted)}.traceQuery .qtext{white-space:pre-wrap;word-break:break-word}.traceQuery .qscore{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .traceSignals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:900px){.traceSignals{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.traceSignals{grid-template-columns:1fr}}
+  .traceSignal{border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--panel2);font-size:11px;min-width:0}.traceSignal b{display:block;margin-bottom:4px}.traceSignal .score{font-size:15px;font-weight:750}.traceSignal .detail{margin-top:5px;color:var(--muted);white-space:pre-wrap;word-break:break-word}
+  .tracePicker{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.tracePicker select{min-width:260px;max-width:100%;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 9px}
+  .foot{font-size:11px;color:var(--muted);margin:8px 2px 25px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Hypirk Retrieval Report Viewer</h1><div class="sub">하피크가 뽑은 <b>hypirk-retrieval-debug JSON</b>을 로컬에서 읽어, 점수 분포·신호 발동·순위 변화·기억별 반복 패턴·API hook 흐름을 한 화면에서 봅니다.</div></div>
+    <button class="btn" id="clearBtn" disabled>비우기</button>
+  </header>
+
+  <div class="drop" id="dropZone">
+    <div><strong>JSON 파일을 여기에 놓으세요.</strong><small>브라우저 안에서만 읽습니다. 업로드/네트워크 요청 없음.</small></div>
+    <div><input id="fileInput" type="file" accept="application/json,.json" class="hidden"><button class="btn primary" id="pickBtn">JSON 선택</button></div>
+  </div>
+
+  <div id="errorBox" class="notice hidden"></div>
+  <main id="report" class="hidden">
+    <div id="coverageNotice" class="notice"></div>
+
+    <section class="card span12" style="margin-bottom:14px">
+      <div class="sectionHead"><div><h2>요약</h2><div class="desc" id="fileMeta"></div></div></div>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <div class="grid">
+      <section class="card span7">
+        <div class="sectionHead"><div><h2>최신 검색의 점수 분포</h2><div class="desc">latestRetrieval.nodeScores 전체 후보 기준</div></div></div>
+        <div id="latestHistogram" class="chart"></div>
+        <div class="metricRows" id="latestShapeMetrics"></div>
+      </section>
+      <section class="card span5">
+        <div class="sectionHead"><div><h2>점수 모양 읽기</h2><div class="desc">정답 판정이 아니라 수치적 행동 양식</div></div></div>
+        <div id="shapeNotes"></div>
+      </section>
+
+      <section class="card span7">
+        <div class="sectionHead"><div><h2>신호가 실제로 일을 했는가</h2><div class="desc">저장된 Retrieval History에서 비영(非零) 기여·평균 기여·관측 순위 변화 추정</div></div></div>
+        <div class="signalGrid" id="signalStats"></div>
+        <div id="signalContributionChart" class="chart" style="margin-top:14px"></div>
+      </section>
+      <section class="card span5">
+        <div class="sectionHead"><div><h2>신호 간 겹침</h2><div class="desc">Pearson 상관계수. 1에 가까울수록 함께 움직임.</div></div></div>
+        <div class="tableWrap" style="max-height:360px"><table id="corrTable"></table></div>
+      </section>
+
+      <section class="card span12">
+        <div class="sectionHead">
+          <div><h2>Retrieval run 흐름</h2><div class="desc">같은 at 타임스탬프를 한 run으로 묶음. History는 compact 기록이라 하위 후보는 생략될 수 있습니다.</div></div>
+        </div>
+        <div id="runTimeline" class="chart"></div>
+        <div class="tableWrap"><table id="runTable"></table></div>
+      </section>
+
+      <section class="card span7">
+        <div class="sectionHead"><div><h2>기억별 반복 패턴</h2><div class="desc">맨날 끼는 기억 / 특정 신호 때만 살아나는 기억을 찾기 위한 표</div></div><div class="toolbar"><input id="memoryFilter" placeholder="node id 검색" size="18"></div></div>
+        <div class="tableWrap"><table id="memoryTable"></table></div>
+      </section>
+      <section class="card span5">
+        <div class="sectionHead"><div><h2>최신 검색 후보</h2><div class="desc">각 신호의 실제 기여량과 최종점수</div></div></div>
+        <div class="tableWrap"><table id="latestTable"></table></div>
+      </section>
+
+      <section class="card span12">
+        <div class="sectionHead"><div><h2>최신 상세 추적</h2><div class="desc">dr15의 Query Separate / Memory 단일 벡터 디버그 데이터를 그대로 읽습니다. 기억을 골라 Query별 기여와 보조 신호를 함께 봅니다.</div></div></div>
+        <div id="traceDetails"></div>
+      </section>
+
+      <section class="card span12">
+        <div class="sectionHead"><div><h2>API hook 흐름</h2><div class="desc">process / beforeRequest / afterRequest 상태와 문맥 전환 확인</div></div></div>
+        <div id="apiSummary" class="signalGrid" style="margin-bottom:12px"></div>
+        <div class="tableWrap"><table id="apiTable"></table></div>
+      </section>
+
+      <section class="card span12">
+        <details><summary>원본 JSON 보기</summary><pre id="rawJson"></pre></details>
+      </section>
+    </div>
+    <div class="foot">이 뷰어는 Hypirk retrieval-debug schemaVersion 1·2를 지원합니다. v2의 누적 분석 로그는 여러 캐릭터·채팅·플러그인 실행 세션을 함께 포함할 수 있습니다. 과거 Retrieval run은 상위 후보 + 실제 선택 기억만 포함하므로 과거 전체 후보 분포나 정확한 counterfactual rank는 복원할 수 없습니다. 최신 검색은 nodeScores와 trace.nodes를 이용해 전체 후보와 Query별 기여를 볼 수 있습니다.</div>
+  </main>
+</div>
+<script>
+(() => {
+  'use strict';
+  let DATA = null;
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const num = (v, d=4) => Number.isFinite(+v) ? (+v).toFixed(d) : '—';
+  const pct = (v, d=1) => Number.isFinite(+v) ? `${(+v*100).toFixed(d)}%` : '—';
+  const mean = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : NaN;
+  const median = a => quantile(a,.5);
+  function quantile(a,q){ if(!a.length)return NaN; const s=[...a].sort((x,y)=>x-y); const p=(s.length-1)*q, b=Math.floor(p), r=p-b; return s[b+1]!==undefined?s[b]+r*(s[b+1]-s[b]):s[b]; }
+  function std(a){ if(a.length<2)return 0; const m=mean(a); return Math.sqrt(mean(a.map(v=>(v-m)**2))); }
+  function corr(a,b){ const pairs=a.map((x,i)=>[x,b[i]]).filter(([x,y])=>Number.isFinite(x)&&Number.isFinite(y)); if(pairs.length<3)return NaN; const xs=pairs.map(p=>p[0]), ys=pairs.map(p=>p[1]), mx=mean(xs), my=mean(ys); const n=pairs.reduce((s,[x,y])=>s+(x-mx)*(y-my),0); const dx=Math.sqrt(pairs.reduce((s,[x])=>s+(x-mx)**2,0)), dy=Math.sqrt(pairs.reduce((s,[,y])=>s+(y-my)**2,0)); return dx&&dy?n/(dx*dy):0; }
+  const dt = t => { const d=new Date(Number(t)); return isNaN(d)?String(t):d.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
+  const val = (o,k) => Number.isFinite(+o?.[k]) ? +o[k] : 0;
+  function heat(v,min=0,max=1){ const x=Math.max(0,Math.min(1,(v-min)/(max-min||1))); return `background:color-mix(in srgb,var(--accent) ${Math.round(x*34)}%, transparent)`; }
+
+  const signalDefs = [
+    {key:'dialogueEmbeddingContribution', raw:'dialogueEmbedding', label:'의미 대사', short:'의미 대사'},
+    {key:'dialogueLocalContribution', raw:'dialogueLocal', label:'어휘 대사', short:'어휘 대사'},
+    {key:'activationCueContribution', raw:'activationCue', label:'활성 키', short:'활성 키'},
+    {key:'likeBonus', raw:'likeBonus', label:'좋아요', short:'좋아요'}
+  ];
+
+  function validate(d){
+    if(!d || d.format!=='hypirk-retrieval-debug') throw new Error('hypirk-retrieval-debug JSON이 아닙니다.');
+    if(d.schemaVersion!==1 && d.schemaVersion!==2) throw new Error(`지원하지 않는 schemaVersion: ${d.schemaVersion}`);
+  }
+  async function loadFile(file){
+    try{ const text=await file.text(); const d=JSON.parse(text); validate(d); DATA=d; render(d,file.name,text); $('#report').classList.remove('hidden'); $('#errorBox').classList.add('hidden'); $('#clearBtn').disabled=false; }
+    catch(e){ $('#errorBox').textContent=`읽기 실패: ${e?.message||e}`; $('#errorBox').classList.remove('hidden'); }
+  }
+
+  function normalizedHistory(d){
+    if(d.schemaVersion===2 && Array.isArray(d.retrievalRuns)){
+      return d.retrievalRuns.flatMap(run=>(run.candidates||[]).map(candidate=>({
+        ...candidate,
+        at:Number.isFinite(+candidate.at)?+candidate.at:+run.at,
+        _runId:run.runId,
+        _sessionId:run.sessionId,
+        _charId:run.charId,
+        _chatId:run.chatId,
+        _charName:run.charName,
+        _chatName:run.chatName,
+        _nodeSourceHash:candidate.nodeSourceHash||'',
+        _config:run.config||{}
+      })));
+    }
+    return (d.retrievalHistory||[]).map(r=>({...r,_runId:String(r.at)}));
+  }
+  function groupRuns(history){ const m=new Map(); (history||[]).forEach(r=>{ const k=String(r._runId||r.at); if(!m.has(k))m.set(k,[]);m.get(k).push(r); }); return [...m.entries()].map(([runId,rows])=>({runId,at:+rows[0]?.at,rows:rows.sort((a,b)=>a.rank-b.rank),charName:rows[0]?._charName||'',chatName:rows[0]?._chatName||'',config:rows[0]?._config||{}})).sort((a,b)=>a.at-b.at); }
+
+  function latestRows(d){
+    const scores=d.latestRetrieval?.nodeScores||{}; const chosen=new Set(d.latestRetrieval?.chosenNodeIds||[]); return Object.entries(scores).map(([nodeId,s])=>({nodeId,selected:chosen.has(nodeId),contentSimilarity:val(s,'similarity'),dialogueEmbedding:val(s,'dialogueEmbedding'),dialogueEmbeddingContribution:val(s,'dialogueEmbeddingContribution'),dialogueLocal:val(s,'dialogueLocal'),dialogueLocalContribution:val(s,'dialogueContribution'),activationCue:val(s,'activationCue'),activationCueContribution:val(s,'activationCueContribution'),likeBonus:val(s,'likeBonus'),combined:val(s,'combined'),status:s.embeddingStatus||''})).sort((a,b)=>b.combined-a.combined).map((r,i)=>({...r,rank:i+1}));
+  }
+
+  function render(d,filename,raw){
+    const hist=normalizedHistory(d), runs=groupRuns(hist), latest=latestRows(d), api=d.apiHookTrace?.events||[];
+    const chars=new Set(hist.map(r=>r._charId).filter(Boolean)), chats=new Set(hist.map(r=>`${r._charId||''}|${r._chatId||''}`).filter(v=>v!=='|'));
+    const sessions=new Set([...hist.map(r=>r._sessionId),...api.map(e=>e.sessionId)].filter(Boolean));
+    const scopeText=d.schemaVersion===2?'통합 Local 분석 로그':`charIndex ${d.scope?.charIndex} / chatIndex ${d.scope?.chatIndex}`;
+    $('#fileMeta').textContent=`${filename} · export ${new Date(d.exportedAt).toLocaleString('ko-KR')} · ${scopeText}`;
+    const storage=d.analysisStorage;
+    $('#coverageNotice').innerHTML=`<b>해석 범위:</b> 최신 검색은 현재 채팅의 ${latest.length}개 nodeScores 전체 후보를 볼 수 있습니다. 과거 run은 run마다 당시 설정과 상위 후보 + 실제 선택 기억을 저장한 compact 기록입니다. 따라서 과거 분포/순위 변화는 <b>관측된 후보 내 통계</b>로 읽어주세요.${storage?` 통합 로그 ${esc((storage.currentBytes/1024/1024).toFixed(2))} / ${esc((storage.maxBytes/1024/1024).toFixed(0))} MB · 퇴거 기록 ${esc(storage.evictedRecords||0)}개`:''}`;
+    const selectedHist=hist.filter(x=>x.selected).length;
+    $('#kpis').innerHTML=[
+      ['검색 run',runs.length],['History 행',hist.length],['캐릭터 / 채팅',d.schemaVersion===2?`${chars.size} / ${chats.size}`:'현재'],['실행 세션',sessions.size||'—'],['최신 후보',latest.length],['최신 선택',latest.filter(x=>x.selected).length],['History 선택 행',selectedHist],['API hook',api.length]
+    ].map(([l,v])=>`<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
+    renderLatestShape(latest); renderSignalStats(hist); renderCorrelations(hist); renderRuns(runs); renderMemories(hist); renderLatestTable(latest); renderTrace(d); renderApi(d.apiHookTrace||{}); $('#rawJson').textContent=raw;
+  }
+
+  function renderLatestShape(rows){
+    const vals=rows.map(r=>r.combined).filter(Number.isFinite), cvals=rows.map(r=>r.contentSimilarity).filter(Number.isFinite);
+    $('#latestHistogram').innerHTML = histogramSVG(vals,cvals,'최종 점수','내용(Content)');
+    const s=[...vals].sort((a,b)=>b-a), q1=quantile(vals,.25), q3=quantile(vals,.75), topGap=s.length>1?s[0]-s[1]:NaN, top5Gap=s.length>5?s[4]-s[5]:NaN;
+    const metrics=[
+      ['범위', vals.length?`${num(Math.min(...vals),3)} – ${num(Math.max(...vals),3)}`:'—','전체 후보의 최저–최고'],
+      ['표준편차',num(std(vals),4),'클수록 점수가 더 펼쳐짐'],
+      ['IQR',num(q3-q1,4),'중앙 50%의 폭'],
+      ['1–2위 간격',num(topGap,4),'최상위 후보 간 분리'],
+      ['5–6위 간격',num(top5Gap,4),'상위권 경계 예시'],
+      ['Content↔Final 상관',num(corr(rows.map(r=>r.contentSimilarity),rows.map(r=>r.combined)),3),'1에 가까우면 보조 신호가 순서를 덜 흔듦']
+    ];
+    $('#latestShapeMetrics').innerHTML=metrics.map(m=>`<div class="metric"><div class="name">${m[0]}</div><div class="num">${m[1]}</div><div class="note">${m[2]}</div></div>`).join('');
+    const notes=[];
+    if(vals.length<2) notes.push('최신 후보가 충분하지 않아 분포 모양을 판단하기 어렵습니다.');
+    else{
+      const sd=std(vals), range=Math.max(...vals)-Math.min(...vals), cf=corr(rows.map(r=>r.contentSimilarity),rows.map(r=>r.combined));
+      notes.push(sd<0.015 ? '최종 점수가 매우 촘촘합니다. 작은 bonus가 순위를 쉽게 뒤집을 수 있는 상태일 수 있습니다.' : sd>0.08 ? '최종 점수가 꽤 넓게 펼쳐져 있습니다. 기본 검색 자체가 후보를 강하게 구분하고 있을 가능성이 있습니다.' : '점수 폭이 지나치게 평평하거나 극단적으로 벌어진 모양은 아닙니다.');
+      if(Number.isFinite(cf)) notes.push(cf>.97 ? 'Content와 Final이 거의 같은 순서로 움직입니다. 보조 신호가 실제 결과를 얼마나 바꾸는지 별도로 확인할 가치가 있습니다.' : cf<.75 ? 'Content와 Final의 움직임이 꽤 달라집니다. 보조 신호가 순위에 실질적으로 개입하고 있을 가능성이 큽니다.' : 'Content가 중심이지만 보조 신호도 어느 정도 순서를 흔드는 형태입니다.');
+      if(Number.isFinite(topGap)) notes.push(topGap<Math.max(sd*.2,.003) ? '1·2위가 매우 가깝습니다. 최상단이 한 기억으로 고정되기보다 경쟁하는 모양입니다.' : '1위가 2위보다 비교적 뚜렷하게 떨어져 있습니다. 이런 패턴이 매 run 반복되는지만 보면 좋습니다.');
+      if(range<.03) notes.push('전체 범위 자체가 좁습니다. 임베딩 점수의 절대값보다 rank와 보조 신호 기여량을 중심으로 보는 편이 낫습니다.');
+    }
+    $('#shapeNotes').innerHTML=notes.map((n,i)=>`<div class="metric" style="margin-bottom:8px"><div class="name">관찰 ${i+1}</div><div class="note" style="font-size:12px;color:var(--text)">${esc(n)}</div></div>`).join('');
+  }
+
+  function histogramSVG(finalVals,contentVals,l1,l2){
+    if(!finalVals.length) return '<div class="empty">최신 점수 데이터가 없습니다.</div>';
+    const all=[...finalVals,...contentVals], min=Math.min(...all), max=Math.max(...all), bins=14, span=max-min||1, f=Array(bins).fill(0), c=Array(bins).fill(0);
+    finalVals.forEach(v=>f[Math.min(bins-1,Math.floor((v-min)/span*bins))]++); contentVals.forEach(v=>c[Math.min(bins-1,Math.floor((v-min)/span*bins))]++);
+    const W=720,H=230,p=34,bw=(W-p*2)/bins, m=Math.max(1,...f,...c);
+    let s=`<div class="chartTitle">${esc(l1)} / ${esc(l2)} 분포</div><svg viewBox="0 0 ${W} ${H}" role="img"><line class="axis" x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}"/>`;
+    for(let i=0;i<bins;i++){ const hf=f[i]/m*(H-p*2), hc=c[i]/m*(H-p*2); s+=`<rect class="bar" opacity=".55" x="${p+i*bw+1}" y="${H-p-hf}" width="${Math.max(1,bw/2-2)}" height="${hf}"/><rect class="bar2" opacity=".75" x="${p+i*bw+bw/2}" y="${H-p-hc}" width="${Math.max(1,bw/2-2)}" height="${hc}"/>`; }
+    s+=`<text class="label" x="${p}" y="${H-8}">${num(min,3)}</text><text class="label" text-anchor="end" x="${W-p}" y="${H-8}">${num(max,3)}</text><text class="label" x="${p}" y="14">■ ${esc(l1)}　▰ ${esc(l2)}</text></svg>`; return s;
+  }
+
+  function signalStats(history){
+    return signalDefs.map(def=>{
+      const fired=history.filter(r=>Math.abs(val(r,def.key))>1e-12), contrib=fired.map(r=>val(r,def.key));
+      const deltas=[];
+      groupRuns(history).forEach(run=>{
+        run.rows.forEach(r=>{ if(Math.abs(val(r,def.key))<=1e-12)return; const without=r.combined-val(r,def.key); const rankWithout=1+run.rows.filter(o=>(o===r?without:o.combined)>without).length; deltas.push(rankWithout-r.rank); });
+      });
+      return {def,fired:fired.length,rate:history.length?fired.length/history.length:0,avg:mean(contrib),max:contrib.length?Math.max(...contrib):0,selectedRate:fired.length?fired.filter(r=>r.selected).length/fired.length:0,avgLift:mean(deltas)};
+    });
+  }
+  function renderSignalStats(hist){
+    const stats=signalStats(hist);
+    $('#signalStats').innerHTML=stats.map(s=>`<div class="signalBox"><small>${esc(s.def.label)}</small><div class="big">${pct(s.rate)}</div><small>발동률 · ${s.fired}회</small><div style="margin-top:7px;font-size:11px">평균 기여 <b>${num(s.avg,4)}</b><br>발동 시 선택률 <b>${pct(s.selectedRate)}</b><br>관측 평균 순위 상승 <b>${Number.isFinite(s.avgLift)?s.avgLift.toFixed(2):'—'}</b></div></div>`).join('');
+    const rows=stats.map(s=>({name:s.def.label,value:Number.isFinite(s.avg)?s.avg:0})); $('#signalContributionChart').innerHTML=barSVG(rows,'발동했을 때 평균 실제 기여량');
+  }
+
+  function barSVG(rows,title){
+    const W=700,H=Math.max(180,rows.length*42+48),pL=110,pR=35,pT=25,pB=25,max=Math.max(.0001,...rows.map(r=>Math.abs(r.value)));
+    let s=`<div class="chartTitle">${esc(title)}</div><svg viewBox="0 0 ${W} ${H}">`;
+    rows.forEach((r,i)=>{ const y=pT+i*42,w=Math.abs(r.value)/max*(W-pL-pR); s+=`<text class="label" text-anchor="end" x="${pL-8}" y="${y+15}">${esc(r.name)}</text><rect class="bar2" x="${pL}" y="${y}" width="${w}" height="20" rx="4"/><text class="label" x="${pL+w+6}" y="${y+15}">${num(r.value,4)}</text>`; });
+    return s+'</svg>';
+  }
+
+  function renderCorrelations(hist){
+    const defs=[{k:'contentSimilarity',l:'내용'},{k:'dialogueEmbeddingContribution',l:'의미 대사'},{k:'dialogueLocalContribution',l:'어휘 대사'},{k:'activationCueContribution',l:'활성 키'},{k:'likeBonus',l:'좋아요'},{k:'combined',l:'최종'}];
+    let h='<thead><tr><th></th>'+defs.map(d=>`<th>${d.l}</th>`).join('')+'</tr></thead><tbody>';
+    defs.forEach(a=>{ h+=`<tr><td>${a.l}</td>`; defs.forEach(b=>{ const v=corr(hist.map(r=>val(r,a.k)),hist.map(r=>val(r,b.k))); const ab=Number.isFinite(v)?Math.abs(v):0; h+=`<td><span class="heat" style="background:color-mix(in srgb,var(--accent) ${Math.round(ab*38)}%,transparent)">${num(v,2)}</span></td>`; }); h+='</tr>'; }); h+='</tbody>'; $('#corrTable').innerHTML=h;
+  }
+
+  function runSummary(run){ const rows=run.rows, vals=rows.map(r=>r.combined), sel=rows.filter(r=>r.selected); return {at:run.at,charName:run.charName,chatName:run.chatName,count:rows.length,selected:sel.length,top:rows[0]?.combined??NaN,mean:mean(vals),spread:vals.length?Math.max(...vals)-Math.min(...vals):NaN,sd:std(vals),boundary: observedBoundary(rows)}; }
+  function observedBoundary(rows){ const s=rows.filter(r=>r.selected).map(r=>r.combined), u=rows.filter(r=>!r.selected).map(r=>r.combined); if(!s.length||!u.length)return NaN; return Math.min(...s)-Math.max(...u); }
+  function renderRuns(runs){ const rs=runs.map(runSummary); $('#runTimeline').innerHTML=lineSVG(rs.map((r,i)=>({x:i+1,y:r.spread,label:dt(r.at)})),'관측 후보 점수 폭 (max − min)');
+    $('#runTable').innerHTML='<thead><tr><th>시각</th><th>캐릭터 / 채팅</th><th>관측 후보</th><th>선택</th><th>Top</th><th>평균</th><th>표준편차</th><th>관측 폭</th><th>관측 선택 경계</th></tr></thead><tbody>'+rs.slice().reverse().map(r=>`<tr><td>${dt(r.at)}</td><td>${esc([r.charName,r.chatName].filter(Boolean).join(' / ')||'—')}</td><td>${r.count}</td><td>${r.selected}</td><td>${num(r.top,4)}</td><td>${num(r.mean,4)}</td><td>${num(r.sd,4)}</td><td>${num(r.spread,4)}</td><td>${num(r.boundary,4)}</td></tr>`).join('')+'</tbody>';
+  }
+  function lineSVG(points,title){ if(!points.length)return '<div class="empty">run 데이터가 없습니다.</div>'; const W=900,H=230,p=34, ys=points.map(p=>p.y).filter(Number.isFinite), min=Math.min(...ys),max=Math.max(...ys),span=max-min||1; const xy=points.map((pt,i)=>({x:p+(W-2*p)*(points.length===1?.5:i/(points.length-1)),y:H-p-(pt.y-min)/span*(H-2*p),...pt})); let s=`<div class="chartTitle">${esc(title)}</div><svg viewBox="0 0 ${W} ${H}"><line class="axis" x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}"/><polyline class="line" points="${xy.map(p=>`${p.x},${p.y}`).join(' ')}"/>`; xy.forEach(p=>s+=`<circle class="dot" cx="${p.x}" cy="${p.y}" r="3"><title>${esc(p.label)} · ${num(p.y===undefined?NaN:p.y,4)}</title></circle>`); s+=`<text class="label" x="${p}" y="14">${num(max,4)}</text><text class="label" x="${p}" y="${H-8}">${num(min,4)}</text></svg>`; return s; }
+
+  function memorySummary(hist){ const m=new Map(); hist.forEach(r=>{ const identity=r._nodeSourceHash?`${r._charId||''}|${r._chatId||''}|${r._nodeSourceHash}`:`${r._charId||''}|${r._chatId||''}|id:${r.nodeId}`;if(!m.has(identity))m.set(identity,[]);m.get(identity).push(r); }); return [...m.entries()].map(([identity,rows])=>({identity,id:rows[rows.length-1]?.nodeId||'',scope:[rows[0]?._charName,rows[0]?._chatName].filter(Boolean).join(' / '),seen:rows.length,runs:new Set(rows.map(r=>r._runId||r.at)).size,selected:rows.filter(r=>r.selected).length,selRate:rows.filter(r=>r.selected).length/rows.length,avgRank:mean(rows.map(r=>r.rank)),avgContent:mean(rows.map(r=>r.contentSimilarity)),avgFinal:mean(rows.map(r=>r.combined)),dialogue:rows.filter(r=>val(r,'dialogueEmbeddingContribution')!==0).length,lexical:rows.filter(r=>val(r,'dialogueLocalContribution')!==0).length,activation:rows.filter(r=>val(r,'activationCueContribution')!==0).length,like:rows.filter(r=>val(r,'likeBonus')!==0).length})).sort((a,b)=>b.selected-a.selected||a.avgRank-b.avgRank); }
+  function renderMemories(hist){ const render=()=>{ const q=$('#memoryFilter').value.trim().toLowerCase(); const rows=memorySummary(hist).filter(r=>!q||`${r.id} ${r.scope} ${r.identity}`.toLowerCase().includes(q)); $('#memoryTable').innerHTML='<thead><tr><th>Memory</th><th>캐릭터 / 채팅</th><th>관측 run</th><th>선택</th><th>선택률</th><th>평균 rank</th><th>내용 평균</th><th>최종 평균</th><th>의미 대사</th><th>어휘 대사</th><th>활성 키</th><th>좋아요</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${esc(r.id)}</td><td>${esc(r.scope||'—')}</td><td>${r.runs}</td><td>${r.selected}</td><td>${pct(r.selRate)}</td><td>${num(r.avgRank,1)}</td><td>${num(r.avgContent,4)}</td><td>${num(r.avgFinal,4)}</td><td>${r.dialogue}</td><td>${r.lexical}</td><td>${r.activation}</td><td>${r.like}</td></tr>`).join('')+'</tbody>'; }; render(); $('#memoryFilter').oninput=render; }
+
+  function renderLatestTable(rows){ $('#latestTable').innerHTML='<thead><tr><th>Memory</th><th>rank</th><th>선택</th><th>내용</th><th>의미 대사 +</th><th>어휘 대사 +</th><th>활성 키 +</th><th>좋아요 +</th><th>최종</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${esc(r.nodeId)}</td><td>${r.rank}</td><td class="${r.selected?'selected':'muted'}">${r.selected?'선택':'—'}</td><td>${num(r.contentSimilarity,4)}</td><td>${num(r.dialogueEmbeddingContribution,4)}</td><td>${num(r.dialogueLocalContribution,4)}</td><td>${num(r.activationCueContribution,4)}</td><td>${num(r.likeBonus,4)}</td><td><span class="heat" style="${heat(r.combined)}">${num(r.combined,4)}</span></td></tr>`).join('')+'</tbody>'; }
+
+  function renderTrace(d){
+    const tr=d.latestRetrieval?.trace, scores=d.latestRetrieval?.nodeScores||{}, chosen=new Set(d.latestRetrieval?.chosenNodeIds||[]), hist=normalizedHistory(d);
+    let h='';
+    if(!tr){
+      h='<div class="empty">최신 embedding trace가 없습니다.</div>';
+      $('#traceDetails').innerHTML=h;
+      return;
+    }
+
+    const queries=tr.queries||[], sources=tr.sources||[], nodes=Object.values(tr.nodes||{}).sort((a,b)=>(a.globalRank||999999)-(b.globalRank||999999));
+    const sourceGroups=new Map();
+    const sourceKey=(idx,role)=>`${idx===undefined?'?':idx}|${role||'?'}`;
+    sources.forEach(s=>sourceGroups.set(sourceKey(s.sourceMessageIndex,s.sourceRole),{source:s,queries:[]}));
+    queries.forEach((q,i)=>{
+      const k=sourceKey(q.sourceMessageIndex,q.sourceRole), g=sourceGroups.get(k)||{source:null,queries:[]};
+      g.queries.push({q,i}); sourceGroups.set(k,g);
+    });
+
+    const sourceCards=[...sourceGroups.values()].map(g=>{
+      const first=g.queries[0]?.q, s=g.source;
+      const label=first?.sourceMessageIndex===undefined?'대체 쿼리':`메시지 #${esc(first.sourceMessageIndex)} · ${esc(first.sourceRole||'알 수 없음')}`;
+      const totalWeight=g.queries.reduce((sum,x)=>sum+val(x.q,'weight'),0);
+      const para=s?`원문 ${s.originalParagraphCount}문단 → 정규식 후 ${s.processedParagraphCount}문단 → Query ${s.queryCount}개`:`Query ${g.queries.length}개`;
+      const queryRows=g.queries.map(({q,i})=>`<div class="traceQuery"><div class="qmeta">Q${i+1} · 조각 ${q.partIndex+1}/${q.partCount}<br>가중치 ${num(q.weight,4)}</div><div class="qtext">${esc(q.text)}</div><div class="qscore">—</div></div>`).join('');
+      return `<div class="traceCard"><div class="traceHead"><span>${label}</span><span>총 가중치 ${num(totalWeight,4)}</span></div><div class="traceMeta">${esc(para)} · 문단 묶음 크기 ${esc(tr.paragraphGroupSize)}</div><details style="margin-top:8px"><summary>분절된 Query 원문 ${g.queries.length}개</summary><div style="margin-top:6px">${queryRows||'<div class="empty">Query 없음</div>'}</div></details></div>`;
+    }).join('');
+
+    h+=`<details open><summary>원문 분절 (Query Separate) · ${queries.length}개 Query / ${sourceGroups.size}개 메시지</summary><div class="traceGrid">${sourceCards||'<div class="empty">기록된 원문 분절이 없습니다.</div>'}</div></details>`;
+
+    const nodeOptions=nodes.map(n=>`<option value="${esc(n.nodeId)}">#${esc(n.globalRank)} · Memory ${esc(n.nodeId)} · 내용 ${num(n.embeddingScore,4)}${chosen.has(n.nodeId)?' · 선택됨':''}</option>`).join('');
+    const rankedRows=nodes.map(n=>`<tr><td>${esc(n.nodeId)}</td><td>${esc(n.globalRank)}</td><td class="${chosen.has(n.nodeId)?'selected':'muted'}">${chosen.has(n.nodeId)?'선택':'—'}</td><td>${num(n.embeddingScore,4)}</td><td>${n.querySimilarities?.length||0}</td></tr>`).join('');
+    h+=`<details open><summary>내용 (Content) · Memory 단일 벡터 × Query 분절</summary>
+      <div class="notice" style="margin-top:9px;margin-bottom:9px">각 Memory는 <b>내용 전체를 벡터 1개</b>로 유지하고, 최근 메시지에서 분절한 각 Query와의 similarity를 계산한 뒤 <b>Σ(similarity × Query weight)</b>로 내용 점수를 만듭니다. 부모–자식 Memory 분할은 사용하지 않습니다.</div>
+      <div class="tableWrap" style="max-height:300px"><table><thead><tr><th>Memory</th><th>내용 순위</th><th>선택</th><th>내용 점수</th><th>Query 수</th></tr></thead><tbody>${rankedRows}</tbody></table></div>
+      <div class="tracePicker"><label for="traceNodeSelect"><b>상세 Memory</b></label><select id="traceNodeSelect">${nodeOptions}</select></div>
+      <div id="traceNodeDetail"></div>
+    </details>`;
+
+    h+=`<details><summary>원본 최신 trace JSON</summary><pre>${esc(JSON.stringify(tr,null,2))}</pre></details>`;
+    $('#traceDetails').innerHTML=h;
+
+    const select=$('#traceNodeSelect');
+    const detail=$('#traceNodeDetail');
+    function drawNode(nodeId){
+      const n=tr.nodes?.[nodeId], s=scores?.[nodeId];
+      if(!n){ detail.innerHTML='<div class="empty">선택한 Memory의 trace가 없습니다.</div>'; return; }
+      const qRows=(n.querySimilarities||[]).map((sim,i)=>{
+        const q=queries[i]||{}, contribution=Number(sim)*(Number(q.weight)||0);
+        const msg=q.sourceMessageIndex===undefined?'대체 쿼리':`메시지 #${q.sourceMessageIndex} · ${q.sourceRole||'?'}`;
+        return `<div class="traceQuery"><div class="qmeta">Q${i+1} · ${esc(msg)}<br>조각 ${Number(q.partIndex||0)+1}/${q.partCount||1} · w ${num(q.weight,4)}</div><div class="qtext">${esc(q.text||'')}</div><div class="qscore">sim ${num(sim,4)}<br><b>+${num(contribution,4)}</b></div></div>`;
+      }).join('');
+      const formula=`내용 임베딩 = Σ(Query similarity × Query weight) = ${num(n.embeddingScore,4)}`;
+      const lexical=s?.dialogueMatch
+        ? `<div class="score">+${num(s.dialogueContribution,4)}</div><div class="detail">원점수 ${num(s.dialogueLocal,4)} · ${esc(s.dialogueMatch.method)}<br>현재: ${esc(s.dialogueMatch.currentDialogue)}<br>과거: ${esc(s.dialogueMatch.storedDialogue)}${s.dialogueMatch.sharedNgrams?.length?'<br>공통 3-word: '+esc(s.dialogueMatch.sharedNgrams.join(', ')):''}</div>`
+        : `<div class="score">+${num(s?.dialogueContribution,4)}</div><div class="detail">일치 없음</div>`;
+      const semantic=s?.dialogueEmbeddingStatus==='ok'
+        ? `<div class="score">+${num(s.dialogueEmbeddingContribution,4)}</div><div class="detail">원점수 ${num(s.dialogueEmbedding,4)} · 현재 bundle ${s.dialogueEmbeddingQueryCount||0} / 기억 bundle ${s.dialogueEmbeddingChildCount||0}${s.dialogueEmbeddingMatch?'<br>현재 묶음:<br>'+esc(s.dialogueEmbeddingMatch.currentDialogue)+'<br><br>기억 묶음:<br>'+esc(s.dialogueEmbeddingMatch.storedDialogue):''}</div>`
+        : `<div class="score">+${num(s?.dialogueEmbeddingContribution,4)}</div><div class="detail">상태: ${esc(s?.dialogueEmbeddingStatus||'기록 없음')}</div>`;
+      const activation=s?.activationCueMatch
+        ? `<div class="score">+${num(s.activationCueContribution,4)}</div><div class="detail">키: ${esc(s.activationCueMatch.cue)}<br>방식: ${esc(s.activationCueMatch.method)} · 원점수 ${num(s.activationCueMatch.score,4)}<br>매칭 대상: ${esc(s.activationCueMatch.queryText)}</div>`
+        : `<div class="score">+${num(s?.activationCueContribution,4)}</div><div class="detail">일치 없음</div>`;
+      const like=`<div class="score">+${num(s?.likeBonus,4)}</div><div class="detail">이 export에는 좋아요 시각 자체는 없고, retrieval 당시 감쇠가 반영된 실제 bonus만 저장됩니다.</div>`;
+      const combined=s?`최종 합산 = 내용 ${num(s.similarity,4)} + 어휘 대사 ${num(s.dialogueContribution,4)} + 의미 대사 ${num(s.dialogueEmbeddingContribution,4)} + 활성 키 ${num(s.activationCueContribution,4)} + 좋아요 ${num(s.likeBonus,4)} = ${num(s.combined,4)}`:`내용 점수 ${num(n.embeddingScore,4)}`;
+      const memHist=hist.filter(x=>String(x.nodeId)===String(nodeId) && (!x._charId || x._charId===d.scope?.charId) && (!x._chatId || x._chatId===d.scope?.chatId)).slice(-20).reverse();
+      const historyRows=memHist.map(e=>`<tr><td>${dt(e.at)}</td><td>${e.rank}</td><td class="${e.selected?'selected':'muted'}">${e.selected?'선택':'—'}</td><td>${num(e.contentSimilarity,3)}</td><td>${num(e.dialogueEmbeddingContribution,3)}</td><td>${num(e.dialogueLocalContribution,3)}</td><td>${num(e.activationCueContribution,3)}</td><td>${num(e.likeBonus,3)}</td><td>${num(e.combined,4)}</td></tr>`).join('');
+      detail.innerHTML=`
+        <div class="traceFormula">${esc(combined)}</div>
+        <div class="traceCard"><div class="traceHead"><span>Memory ${esc(nodeId)} 전체 내용 · 내용 순위 #${esc(n.globalRank)}</span><span>내용 ${num(n.embeddingScore,4)}</span></div><div class="traceText">${esc(n.memoryText||'')}</div><div class="traceFormula">${esc(formula)}</div><details open><summary>Query별 similarity ${n.querySimilarities?.length||0}개</summary><div style="margin-top:5px">${qRows||'<div class="empty">Query별 점수 없음</div>'}</div></details></div>
+        <div class="traceSignals" style="margin-top:9px">
+          <div class="traceSignal"><b>어휘 대사 (Lexical Dialogue)</b>${lexical}</div>
+          <div class="traceSignal"><b>의미 대사 (Semantic Dialogue)</b>${semantic}</div>
+          <div class="traceSignal"><b>활성 키</b>${activation}</div>
+          <div class="traceSignal"><b>좋아요</b>${like}</div>
+        </div>
+        <details style="margin-top:9px"><summary>이 Memory의 검색 이력 · 최근 ${memHist.length}회</summary><div class="tableWrap" style="max-height:300px;margin-top:7px"><table><thead><tr><th>시각</th><th>rank</th><th>선택</th><th>내용</th><th>의미 대사 +</th><th>어휘 대사 +</th><th>활성 키 +</th><th>좋아요 +</th><th>최종</th></tr></thead><tbody>${historyRows}</tbody></table></div></details>`;
+    }
+    if(select){ select.onchange=()=>drawNode(select.value); if(select.value) drawNode(select.value); }
+  }
+
+  function renderApi(api){ const ev=api.events||[], counts={process:0,beforeRequest:0,afterRequest:0,ok:0,skip:0,error:0}; ev.forEach(e=>{counts[e.hook]=(counts[e.hook]||0)+1;counts[e.status]=(counts[e.status]||0)+1}); const sessions=new Set(ev.map(e=>e.sessionId).filter(Boolean)); $('#apiSummary').innerHTML=[['세션',sessions.size||'—'],['process',counts.process],['beforeRequest',counts.beforeRequest],['afterRequest',counts.afterRequest],['ok',counts.ok],['skip',counts.skip],['error',counts.error]].map(([l,v])=>`<div class="signalBox"><small>${l}</small><div class="big">${v}</div></div>`).join(''); $('#apiTable').innerHTML='<thead><tr><th>세션 / #</th><th>시각</th><th>hook</th><th>request type</th><th>상태</th><th>reason</th><th>character / chat</th></tr></thead><tbody>'+ev.slice().reverse().map(e=>`<tr><td>${esc(e.sessionId?e.sessionId.slice(0,8):'—')} / ${esc(e.sequenceInSession??e.sequence)}</td><td>${esc(new Date(e.timestamp).toLocaleString('ko-KR'))}</td><td>${esc(e.hook)}</td><td>${esc(e.requestType||'')}</td><td>${esc(e.status)}</td><td>${esc(e.reason||'')}</td><td>${esc((e.context?.charName||'')+' / '+(e.context?.chatName||''))}</td></tr>`).join('')+'</tbody>'; }
+
+  $('#pickBtn').onclick=()=>$('#fileInput').click(); $('#fileInput').onchange=e=>e.target.files?.[0]&&loadFile(e.target.files[0]);
+  const dz=$('#dropZone'); ['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add('drag')})); ['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove('drag')})); dz.addEventListener('drop',e=>e.dataTransfer?.files?.[0]&&loadFile(e.dataTransfer.files[0]));
+  $('#clearBtn').onclick=()=>{DATA=null;$('#report').classList.add('hidden');$('#fileInput').value='';$('#clearBtn').disabled=true;};
+})();
+</script>
+</body>
+</html>
