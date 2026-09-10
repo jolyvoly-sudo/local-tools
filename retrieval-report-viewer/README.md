@@ -1,4 +1,4 @@
-# Retrieval Report Viewe
+# Retrieval Report Viewer
 A local browser-based viewer for inspecting retrieval debug data.
 
 ## Features
