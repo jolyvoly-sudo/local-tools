@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>JSON Atelier</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#17191b; --surface:#202326; --surface2:#2a2e32; --surface3:#262a2e; --input:#17191b;
+    --text:#e4e7ea; --muted:#a7adb4; --strong:#f5f6f7; --line:#454a50; --control-line:#747b83;
+    --accent:#69737d; --accent-hover:#59636d; --on-accent:#ffffff;
+    --danger:#915b62; --ok:#7d9a84; --warn:#c58c92; --chip:#30353a; --overlay:rgba(4,5,6,.78);
+    --radius:10px; --radius-sm:7px; --radius-lg:14px; --font:15px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:500 var(--font)/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  button,input,textarea,select{font:inherit}
+  button{touch-action:manipulation}
+  .app{min-height:100dvh;padding-bottom:84px}
+  .top{
+    position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;
+    padding:10px 12px calc(10px + env(safe-area-inset-top));background:color-mix(in srgb,var(--bg) 92%,transparent);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)
+  }
+  .brand{font-weight:800;letter-spacing:.02em;margin-right:auto}
+  .icon,.btn{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;min-height:42px;padding:9px 12px}
+  .icon{width:42px;padding:0;font-size:18px}
+  .btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:800}
+  .btn.danger{color:var(--danger)}
+  .btn:disabled{opacity:.45}
+  .toolbar{display:flex;gap:8px;overflow:auto;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .toolbar .btn{white-space:nowrap}
+  .main{padding:12px;display:grid;gap:12px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .panelHd{display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
+  .panelHd strong{margin-right:auto}
+  .panelBody{padding:12px 0 12px 12px}
+  .quickPanel .panelBody{padding:12px}
+  .muted{color:var(--muted)}
+  .drop{
+    border:1.5px dashed var(--line);
+    border-radius:8px;
+    padding:18px;
+    margin-right:12px;
+    text-align:center;
+    background:var(--surface2);
+  }
+  .drop input{display:none}
+  .tree{display:grid;gap:6px;width:100%}
+
+  /* Hierarchy containers use indentation + guide lines rather than
+     centered boxes inside boxes. */
+  details.node{
+    border:0;
+    border-radius:0;
+    background:transparent;
+    overflow:visible;
+    min-width:0;
+  }
+  details.node>summary{
+    cursor:pointer;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:44px;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:7px 0 0 7px;
+    background:var(--surface2);
+    min-width:0;
+    width:100%;
+  }
+  details.node>summary::-webkit-details-marker{display:none}
+  details.node[data-depth="0"]>summary{
+    background:var(--surface2);
+    border-color:var(--line);
+    border-radius:0;
+    width:100%;
+  }
+  details.node[data-depth="0"]>.children{
+    margin-left:10px;
+    padding-left:12px;
+    padding-right:0;
+    width:calc(100% - 10px);
+  }
+  .caret{display:inline-block;transition:.15s transform;flex:0 0 auto}
+  details[open]>.sum .caret{transform:rotate(90deg)}
+  .key{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .type{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap}
+
+  .children{
+    position:relative;
+    margin-left:13px;
+    padding:7px 0 0 13px;
+    display:grid;
+    gap:7px;
+    min-width:0;
+    width:calc(100% - 13px);
+  }
+  .children::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:5px;
+    width:1px;
+    background:var(--line);
+    opacity:.9;
+  }
+
+  /* Only actual primitive/value editors remain inset cards. */
+  .card{
+    width:100%;
+    margin:0;
+    border:1px solid var(--line);
+    border-radius:7px 0 0 7px;
+    background:var(--surface3);
+    padding:10px;
+    display:grid;
+    gap:8px;
+    min-width:0;
+  }
+  .rowHead{display:flex;align-items:center;gap:8px}
+  .rowHead .k{font-weight:800;word-break:break-all}
+  .rowHead .path{margin-left:auto;color:var(--muted);font-size:11px;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .field{display:grid;gap:6px}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;border:1px solid var(--control-line);background:var(--input);color:var(--text);border-radius:7px;padding:10px 11px;outline:none
+  }
+  textarea{min-height:96px;resize:vertical}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  .minirow{display:flex;gap:7px;flex-wrap:wrap}
+  .mini{border:1px solid var(--line);background:var(--chip);color:var(--text);border-radius:7px;padding:7px 9px;min-height:36px}
+  .toggle{display:flex;align-items:center;gap:8px}
+  .badge{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:12px;color:var(--muted)}
+  .changed{box-shadow:inset 3px 0 0 var(--warn)}
+  .searchbox{display:flex;gap:8px}
+  .searchbox input{flex:1}
+  .result{padding:8px 0;border-bottom:1px solid var(--line)}
+  .result:last-child{border-bottom:0}
+  .bottomNav{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    display:grid;grid-template-columns:repeat(4,1fr);gap:7px;background:color-mix(in srgb,var(--bg) 94%,transparent);
+    backdrop-filter:blur(14px);border-top:1px solid var(--line)
+  }
+  .navBtn{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;min-height:48px;padding:6px;font-size:12px}
+  .navBtn.active{border-color:var(--accent)}
+  .drawer{position:fixed;inset:0;z-index:40;display:none;background:var(--overlay)}
+  .drawer.show{display:flex}
+  .sheet{margin-top:auto;width:100%;max-height:88dvh;background:var(--surface);border-radius:14px 14px 0 0;border-top:1px solid var(--line);overflow:auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  .sheetHd{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--line);z-index:2}
+  .sheetHd strong{margin-right:auto}
+  .section{padding:12px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+  .pipelineStep{border:1px solid var(--line);border-radius:8px;background:var(--surface2);padding:10px;display:grid;gap:8px}
+  .stepHd{display:flex;align-items:center;gap:8px}
+  .stepHd strong{margin-right:auto}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .preview{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:var(--input);border:1px solid var(--line);border-radius:7px;padding:10px;max-height:260px;overflow:auto}
+  .themeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .themeChoice{min-width:0;text-align:left;border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:8px;padding:10px;display:grid;gap:8px}
+  .themeChoice.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .themeName{font-weight:800;white-space:normal;line-height:1.25}
+  .swatches{display:flex;gap:4px}
+  .swatch{height:12px;flex:1;border-radius:3px;border:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+  .fieldSuggestions{display:flex;gap:7px;flex-wrap:wrap;max-height:210px;overflow:auto;padding:2px 0}
+  .fieldChoice{border:1px solid var(--line);background:var(--surface2);color:var(--text);border-radius:7px;padding:7px 9px;min-height:36px}
+  .fieldChoice.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--surface2))}
+  .filterNotice{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:10px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:60;background:var(--surface3);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:9px 13px;display:none;max-width:88vw;text-align:center}
+  .toast.show{display:block}
+  .hidden{display:none!important}
+
+  @media(max-width:520px){
+    .children{
+      margin-left:9px;
+      padding-left:10px;
+      padding-right:0;
+      width:calc(100% - 9px);
+    }
+    details.node>summary{
+      padding-left:9px;
+      padding-right:9px;
+    }
+    .card{
+      width:100%;
+      margin:0;
+    }
+  }
+
+  @media(min-width:900px){
+    .main{grid-template-columns:minmax(0,1fr) 360px;align-items:start}
+    .bottomNav{left:auto;width:420px;right:16px;border:1px solid var(--line);border-radius:10px 10px 0 0}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">JSON Atelier</div>
+    <button class="icon" id="undoBtn" title="Undo">↶</button>
+    <button class="icon" id="redoBtn" title="Redo">↷</button>
+    <button class="icon" id="saveBtn" title="JSON 저장">⇩</button>
+  </header>
+
+  <div class="toolbar">
+    <label class="btn">JSON 열기<input id="fileInput" type="file" accept=".json,application/json"></label>
+    <button class="btn" id="pasteBtn">붙여넣기</button>
+    <button class="btn" id="copyBtn">전체 복사</button>
+    <button class="btn" id="expandBtn">전체 펼치기</button>
+    <button class="btn" id="collapseBtn">전체 접기</button>
+    <button class="btn" id="fieldViewBtn">필드만 보기</button>
+  </div>
+
+  <main class="main">
+    <section class="panel">
+      <div class="panelHd"><strong>JSON</strong><span class="badge" id="statusBadge">파일 없음</span></div>
+      <div class="panelBody">
+        <div class="drop" id="emptyState">
+          <div style="font-weight:800;margin-bottom:6px">JSON 파일을 열어주세요</div>
+          <div class="muted">파일은 브라우저 안에서만 처리됩니다.</div>
+        </div>
+        <div class="tree hidden" id="tree"></div>
+      </div>
+    </section>
+
+    <aside class="panel quickPanel">
+      <div class="panelHd"><strong>빠른 탐색</strong></div>
+      <div class="panelBody">
+        <div class="searchbox"><input id="searchInput" type="text" placeholder="키 또는 값 검색"><button class="btn" id="searchBtn">검색</button></div>
+        <div id="searchResults" style="margin-top:10px"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<nav class="bottomNav">
+  <button class="navBtn" data-sheet="pipelineSheet">Pipeline</button>
+  <button class="navBtn" data-sheet="savedSheet">저장 규칙</button>
+  <button class="navBtn" data-sheet="recipeSheet">Recipe</button>
+  <button class="navBtn" data-sheet="toolsSheet">도구</button>
+</nav>
+
+<div class="drawer" id="pipelineSheet">
+  <div class="sheet">
+    <div class="sheetHd"><strong>Pipeline</strong><button class="icon close">×</button></div>
+    <div class="section">
+      <label>적용 범위
+        <select id="scopeMode">
+          <option value="selected">선택한 배열/객체의 모든 항목</option>
+          <option value="key">전체 JSON에서 특정 키를 가진 객체</option>
+          <option value="path">경로 패턴</option>
+        </select>
+      </label>
+      <div id="selectedScopeInfo" class="muted">트리에서 배열/객체의 ‘범위 선택’을 눌러주세요.</div>
+      <input id="scopeArg" type="text" placeholder="키 이름 또는 memories[*] 같은 경로" />
+    </div>
+    <div class="section">
+      <div class="grid2">
+        <label>소스 필드<input id="sourceField" type="text" value="content"></label>
+        <label>결과 필드<input id="targetField" type="text" value="time"></label>
+      </div>
+      <label>추출 Regex<input id="extractRegex" type="text" placeholder="예: Date:\s*(.*?)\n"></label>
+      <div class="grid2">
+        <label>Flags<input id="regexFlags" type="text" value="m"></label>
+        <label>Capture<input id="captureGroup" type="number" min="0" value="1"></label>
+      </div>
+      <label class="toggle"><input id="removeMatch" type="checkbox" checked> 소스에서 전체 match 제거</label>
+    </div>
+    <div class="section">
+      <div style="display:flex;align-items:center"><strong style="margin-right:auto">Transform 단계</strong><button class="btn" id="addTransformBtn">+ 추가</button></div>
+      <div id="transformList"></div>
+    </div>
+    <div class="section">
+      <div class="minirow">
+        <button class="btn" id="previewPipelineBtn">미리보기</button>
+        <button class="btn primary" id="applyPipelineBtn">적용</button>
+        <button class="btn" id="savePipelineBtn">Pipeline 저장</button>
+      </div>
+      <div id="pipelinePreview" class="preview">아직 미리보기가 없습니다.</div>
+    </div>
+  </div>
+</div>
+
+<div class="drawer" id="savedSheet">
+  <div class="sheet">
+    <div class="sheetHd"><strong>저장된 Pipeline</strong><button class="icon close">×</button></div>
+    <div class="section" id="savedPipelines"></div>
+  </div>
+</div>
+
+<div class="drawer" id="recipeSheet">
+  <div class="sheet">
+    <div class="sheetHd"><strong>Recipe</strong><button class="icon close">×</button></div>
+    <div class="section">
+      <div class="muted">저장된 Pipeline 여러 개를 순서대로 묶어 실행합니다. Recipe 실행 전체가 Undo 한 단계입니다.</div>
+      <input id="recipeName" type="text" placeholder="Recipe 이름">
+      <div id="recipeChecks"></div>
+      <button class="btn" id="saveRecipeBtn">Recipe 저장</button>
+    </div>
+    <div class="section" id="savedRecipes"></div>
+  </div>
+</div>
+
+
+<div class="drawer" id="fieldViewSheet">
+  <div class="sheet">
+    <div class="sheetHd"><strong>필드만 보기</strong><button class="icon close">×</button></div>
+    <div class="section">
+      <div class="muted">
+        선택한 필드만 각 객체 카드에 표시합니다. 여러 필드를 동시에 선택할 수 있습니다.
+        필드 이름은 대소문자를 구분하지 않습니다.
+      </div>
+      <div class="searchbox">
+        <input id="fieldFilterInput" type="text" placeholder="예: content, createdAt">
+        <button class="btn" id="addFieldFilterBtn">추가</button>
+      </div>
+      <div id="fieldFilterChips" class="minirow"></div>
+      <div>
+        <div class="muted" style="margin-bottom:7px">현재 JSON에서 발견된 필드</div>
+        <div id="fieldKeySuggestions" class="fieldSuggestions"></div>
+      </div>
+      <div class="minirow">
+        <button class="btn primary" id="applyFieldViewBtn">선택 필드만 보기</button>
+        <button class="btn" id="clearFieldViewBtn">전체 필드 보기</button>
+      </div>
+      <div class="muted">
+        쉼표로 여러 필드를 한 번에 추가할 수도 있습니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="drawer" id="toolsSheet">
+  <div class="sheet">
+    <div class="sheetHd"><strong>도구</strong><button class="icon close">×</button></div>
+    <div class="section">
+      <div style="display:flex;align-items:center;gap:8px"><strong style="margin-right:auto">컬러 팔레트</strong><span class="badge" id="themeBadge">Graphite</span></div>
+      <div id="themeGrid" class="themeGrid"></div>
+    </div>
+    <div class="section">
+      <button class="btn" id="validateBtn">JSON 검증</button>
+      <button class="btn" id="formatBtn">현재 데이터 다시 포맷</button>
+      <button class="btn" id="findEmptyBtn">빈 값 / null 찾기</button>
+      <button class="btn danger" id="clearSavedBtn">저장된 Pipeline/Recipe 삭제</button>
+      <div class="muted">변경은 세션 내 Undo/Redo로 되돌릴 수 있습니다. Pipeline 또는 Recipe 한 번 실행은 각각 Undo 한 단계입니다.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  let data = null, fileName = "edited.json", selectedScopePath = null;
+  let fieldViewFilters = [];
+  let undoStack = [], redoStack = [], batchDepth = 0, batchSnapshot = null;
+  const MAX_HISTORY = 50;
+  let transforms = [{type:"trim"}];
+
+  const THEME_KEY = "jsonAtelier.theme.v1";
+  const THEMES = [
+    {id:"graphite",name:"Graphite",scheme:"dark",swatches:["#17191b","#202326","#2a2e32","#134528","#1e326f"],vars:{bg:"#17191b",surface:"#202326",surface2:"#2a2e32",surface3:"#262a2e",input:"#17191b",line:"#454a50",controlLine:"#747b83",accent:"#69737d",accentHover:"#59636d",danger:"#915b62",text:"#e4e7ea",muted:"#a7adb4",strong:"#f5f6f7",onAccent:"#ffffff",chip:"#30353a",warn:"#c58c92",ok:"#7d9a84",overlay:"rgba(4,5,6,.78)"}},
+    {id:"ivory",name:"Ivory",scheme:"light",swatches:["#f4f3ef","#fffefa","#e8e9e5","#4f6575","#25282b"],vars:{bg:"#f4f3ef",surface:"#fffefa",surface2:"#e8e9e5",surface3:"#f7f6f1",input:"#fffefa",line:"#c9ccc8",controlLine:"#767b80",accent:"#4f6575",accentHover:"#3d5261",danger:"#9b5057",text:"#25282b",muted:"#62676c",strong:"#304957",onAccent:"#ffffff",chip:"#d8dde0",warn:"#9b5057",ok:"#496b72",overlay:"rgba(24,27,30,.52)"}},
+    {id:"kitty_classic",name:"Kitty Classic",scheme:"light",swatches:["#f8f3ee","#fffdfa","#d9414e","#3d74d8","#f1cb3d"],vars:{bg:"#f8f3ee",surface:"#fffdfa",surface2:"#f1e8e1",surface3:"#fff8f3",input:"#fffdfa",line:"#dbcfc5",controlLine:"#8f837b",accent:"#d9414e",accentHover:"#c53542",danger:"#a1444d",text:"#30292a",muted:"#726767",strong:"#6d3a41",onAccent:"#ffffff",chip:"#f1e8e1",warn:"#f1cb3d",ok:"#3d74d8",overlay:"rgba(34,30,31,.48)"}},
+    {id:"catppuccin_latte",name:"Catppuccin Latte",scheme:"light",swatches:["#eff1f5","#f7ecea","#e5ecf6","#1e66f5","#8839ef"],vars:{bg:"#eff1f5",surface:"#f7ecea",surface2:"#e5ecf6",surface3:"#f5f0f3",input:"#fdf9f8",line:"#c7c9d3",controlLine:"#7f849c",accent:"#1e66f5",accentHover:"#1857d5",danger:"#d20f39",text:"#303446",muted:"#686c82",strong:"#4c4f69",onAccent:"#ffffff",chip:"#e6e9ef",warn:"#8839ef",ok:"#209fb5",overlay:"rgba(31,34,48,.40)"}},
+    {id:"cocoa_night",name:"Cocoa Night",scheme:"dark",swatches:["#1b1715","#251f1c","#312926","#815b49","#a86573"],vars:{bg:"#1b1715",surface:"#251f1c",surface2:"#312926",surface3:"#2b2421",input:"#1b1715",line:"#3a302b",controlLine:"#4b403a",accent:"#815b49",accentHover:"#6d4a3b",danger:"#92505b",text:"#d8cdc6",muted:"#a8978f",strong:"#e4d9d2",onAccent:"#e8ded8",chip:"#3a302b",warn:"#a86573",ok:"#a8b9c8",overlay:"rgba(7,5,4,.80)"}},
+    {id:"cherry_butter",name:"Cherry Butter",scheme:"light",swatches:["#ebe0de","#fffcf4","#eeefed","#6c0e15","#f2e0a0"],vars:{bg:"#ebe0de",surface:"#fffcf4",surface2:"#eeefed",surface3:"#f7f1e8",input:"#fffdf7",line:"#c0c2c1",controlLine:"#6a555c",accent:"#6c0e15",accentHover:"#570b10",danger:"#963a43",text:"#2a2227",muted:"#525a56",strong:"#372930",onAccent:"#f5ece7",chip:"#eae9d6",warn:"#f2e0a0",ok:"#6a555c",overlay:"rgba(47,35,39,.42)"}},
+    {id:"tailored_first_crush",name:"Tailored First Crush",scheme:"dark",swatches:["#1e1e1f","#474243","#28393c","#5c5453","#ac6f6f"],vars:{bg:"#1e1e1f",surface:"#474243",surface2:"#28393c",surface3:"#353738",input:"#202324",line:"#435559",controlLine:"#65767a",accent:"#5c5453",accentHover:"#6d6261",danger:"#8f565c",text:"#d2c7c4",muted:"#a99f9f",strong:"#e1d8d4",onAccent:"#e8dedb",chip:"#5d585a",warn:"#ac6f6f",ok:"#a8b7ad",overlay:"rgba(7,7,8,.80)"}}
+  ];
+  let currentTheme = localStorage.getItem(THEME_KEY) || "graphite";
+
+  function applyTheme(id, persist=true){
+    const theme=THEMES.find(t=>t.id===id) || THEMES[0];
+    currentTheme=theme.id;
+    const root=document.documentElement;
+    root.style.colorScheme=theme.scheme;
+    const map={bg:"--bg",surface:"--surface",surface2:"--surface2",surface3:"--surface3",input:"--input",text:"--text",muted:"--muted",strong:"--strong",line:"--line",controlLine:"--control-line",accent:"--accent",accentHover:"--accent-hover",onAccent:"--on-accent",danger:"--danger",ok:"--ok",warn:"--warn",chip:"--chip",overlay:"--overlay"};
+    for(const [k,v] of Object.entries(theme.vars)) root.style.setProperty(map[k],v);
+    if(persist) localStorage.setItem(THEME_KEY,theme.id);
+    renderThemePicker();
+  }
+  function renderThemePicker(){
+    const grid=document.querySelector("#themeGrid");
+    if(!grid)return;
+    grid.innerHTML="";
+    THEMES.forEach(theme=>{
+      const b=document.createElement("button");
+      b.type="button"; b.className="themeChoice"+(theme.id===currentTheme?" active":"");
+      b.innerHTML=`<span class="themeName">${theme.name}</span><span class="swatches">${theme.swatches.map(c=>`<span class="swatch" style="background:${c}"></span>`).join("")}</span>`;
+      b.onclick=()=>applyTheme(theme.id,true);
+      grid.appendChild(b);
+    });
+    const badge=document.querySelector("#themeBadge"); if(badge) badge.textContent=(THEMES.find(t=>t.id===currentTheme)||THEMES[0]).name;
+  }
+
+  const clone = x => structuredClone(x);
+  const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const toast = msg => { const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); };
+  const typeOf = v => v===null?"null":Array.isArray(v)?"array":typeof v;
+  const fmtPath = p => p.length ? p.map((x,i)=> typeof x==="number" ? `[${x}]` : (i?`.${x}`:x)).join("") : "$";
+
+  function pushHistory(label="edit"){
+    if(batchDepth){ if(!batchSnapshot) batchSnapshot={data:clone(data),label}; return; }
+    undoStack.push({data:clone(data),label}); if(undoStack.length>MAX_HISTORY) undoStack.shift();
+    redoStack=[]; updateHistoryButtons();
+  }
+  function beginBatch(label){ batchDepth++; if(batchDepth===1) batchSnapshot={data:clone(data),label}; }
+  function endBatch(){
+    batchDepth=Math.max(0,batchDepth-1);
+    if(batchDepth===0 && batchSnapshot){ undoStack.push(batchSnapshot); if(undoStack.length>MAX_HISTORY) undoStack.shift(); redoStack=[]; batchSnapshot=null; updateHistoryButtons(); }
+  }
+  function updateHistoryButtons(){ $("#undoBtn").disabled=!undoStack.length; $("#redoBtn").disabled=!redoStack.length; }
+  function undo(){ if(!undoStack.length||data===null)return; redoStack.push({data:clone(data),label:"redo"}); data=undoStack.pop().data; render(); }
+  function redo(){ if(!redoStack.length||data===null)return; undoStack.push({data:clone(data),label:"undo"}); data=redoStack.pop().data; render(); }
+
+  function getAtPath(path){
+    let cur=data; for(const k of path){ if(cur==null) return undefined; cur=cur[k]; } return cur;
+  }
+  function setAtPath(path,val){
+    if(!path.length){ data=val; return; }
+    let cur=data; for(let i=0;i<path.length-1;i++) cur=cur[path[i]];
+    cur[path[path.length-1]]=val;
+  }
+  function delAtPath(path){
+    if(!path.length)return;
+    let cur=data; for(let i=0;i<path.length-1;i++) cur=cur[path[i]];
+    const k=path.at(-1); Array.isArray(cur)?cur.splice(k,1):delete cur[k];
+  }
+
+  function fieldKeySelected(key){
+    const needle=String(key).toLowerCase();
+    return fieldViewFilters.some(f=>String(f).toLowerCase()===needle);
+  }
+  function subtreeHasSelectedField(value){
+    if(!fieldViewFilters.length) return true;
+    if(Array.isArray(value)) return value.some(subtreeHasSelectedField);
+    if(value && typeof value==="object"){
+      return Object.entries(value).some(([k,v])=>fieldKeySelected(k) || subtreeHasSelectedField(v));
+    }
+    return false;
+  }
+  function collectFieldKeys(){
+    const counts=new Map();
+    if(data===null) return [];
+    walk(data,[],v=>{
+      if(v && typeof v==="object" && !Array.isArray(v)){
+        Object.keys(v).forEach(k=>counts.set(k,(counts.get(k)||0)+1));
+      }
+    });
+    return [...counts.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0])).slice(0,100);
+  }
+
+  function render(){
+    const has=data!==null; $("#emptyState").classList.toggle("hidden",has); $("#tree").classList.toggle("hidden",!has);
+    $("#statusBadge").textContent = has ? (fieldViewFilters.length ? `필드 뷰 · ${fieldViewFilters.length}개` : `${typeOf(data)} · ${roughCount(data)} nodes`) : "파일 없음";
+    if(has){
+      $("#tree").innerHTML="";
+      if(fieldViewFilters.length && !subtreeHasSelectedField(data)){
+        const msg=document.createElement("div"); msg.className="filterNotice"; msg.textContent=`선택한 필드 (${fieldViewFilters.join(", ")})를 찾지 못했습니다.`; $("#tree").appendChild(msg);
+      } else {
+        $("#tree").appendChild(renderNode(data,[], "$", true, false));
+      }
+    }
+    updateHistoryButtons(); updateSelectedScopeInfo(); renderFieldKeySuggestions();
+  }
+  function roughCount(v){ let n=1; if(v&&typeof v==="object") for(const x of Object.values(v)) n+=roughCount(x); return n; }
+
+  function renderNode(value,path,keyLabel,open=false,forceShow=false){
+    const t=typeOf(value);
+    if(t==="object"||t==="array"){
+      const d=document.createElement("details"); d.className="node";
+      d.dataset.depth=String(path.length);
+      d.open = fieldViewFilters.length ? true : (open||path.length<1);
+      const sum=document.createElement("summary"); sum.className="sum";
+      sum.innerHTML=`<span class="caret">›</span><span class="key">${esc(keyLabel)}</span><span class="type">${t==="array"?"Array":"Object"} · ${Object.keys(value).length}</span>`;
+      d.appendChild(sum);
+      const ch=document.createElement("div"); ch.className="children";
+      const tools=document.createElement("div"); tools.className="minirow";
+      const select=document.createElement("button"); select.className="mini"; select.textContent="범위 선택";
+      select.onclick=e=>{e.preventDefault();selectedScopePath=[...path];$("#scopeMode").value="selected";updateSelectedScopeInfo();toast(`${fmtPath(path)} 선택됨`);};
+      const add=document.createElement("button"); add.className="mini"; add.textContent=t==="array"?"+ 항목":"+ 필드";
+      add.onclick=e=>{e.preventDefault(); pushHistory("add"); if(t==="array") value.push(null); else {let k="newKey",i=1; while(k in value) k=`newKey${i++}`; value[k]="";} render();};
+      tools.append(select,add);
+      if(!fieldViewFilters.length) ch.appendChild(tools);
+      Object.entries(value).forEach(([k,v])=>{
+        const kp=t==="array"?Number(k):k;
+        const exactMatch = t==="object" && fieldKeySelected(k);
+        let show = true;
+        if(fieldViewFilters.length && !forceShow){
+          show = t==="array" ? subtreeHasSelectedField(v) : (exactMatch || subtreeHasSelectedField(v));
+        }
+        if(show){
+          ch.appendChild(renderNode(v,[...path,kp],String(k),false,forceShow || exactMatch));
+        }
+      });
+      d.appendChild(ch); return d;
+    }
+
+    const c=document.createElement("div"); c.className="card";
+    const hd=document.createElement("div"); hd.className="rowHead";
+    hd.innerHTML=`<div class="k">${esc(keyLabel)}</div><div class="path">${esc(fmtPath(path))}</div>`;
+    const del=document.createElement("button"); del.className="mini"; del.textContent="삭제";
+    del.onclick=()=>{pushHistory("delete");delAtPath(path);render();}; if(!fieldViewFilters.length) hd.appendChild(del); c.appendChild(hd);
+
+    const field=document.createElement("div"); field.className="field";
+    const keyName=String(path.at(-1)??"").toLowerCase();
+    if(t==="string"){
+      const long = value.length>80 || value.includes("\n") || ["content","text","prompt","body","description"].some(x=>keyName.includes(x));
+      const inp=document.createElement(long?"textarea":"input"); if(!long) inp.type="text"; inp.value=value;
+      inp.onfocus=()=>inp.dataset.before=JSON.stringify(data);
+      inp.onchange=()=>{ const before=inp.dataset.before; if(before) undoStack.push({data:JSON.parse(before),label:"field edit"}); setAtPath(path,inp.value); redoStack=[]; updateHistoryButtons(); c.classList.add("changed"); };
+      field.appendChild(inp);
+    } else if(t==="number"){
+      const inp=document.createElement("input"); inp.type="number"; inp.value=value;
+      inp.onchange=()=>{pushHistory("number edit");setAtPath(path,Number(inp.value));render();}; field.appendChild(inp);
+    } else if(t==="boolean"){
+      const lab=document.createElement("label");lab.className="toggle";const inp=document.createElement("input");inp.type="checkbox";inp.checked=value;
+      inp.onchange=()=>{pushHistory("boolean edit");setAtPath(path,inp.checked);render();};lab.append(inp,document.createTextNode(value?" true":" false"));field.appendChild(lab);
+    } else {
+      const row=document.createElement("div");row.className="minirow";
+      ["string","number","boolean","object","array"].forEach(nt=>{const b=document.createElement("button");b.className="mini";b.textContent=`null → ${nt}`;b.onclick=()=>{pushHistory("type change");setAtPath(path,nt==="string"?"":nt==="number"?0:nt==="boolean"?false:nt==="object"?{}:[]);render();};row.appendChild(b);});field.appendChild(row);
+    }
+    c.appendChild(field); return c;
+  }
+
+  async function loadFile(file){
+    try{ const text=await file.text(); data=JSON.parse(text); fileName=file.name.replace(/\.json$/i,"")+"-edited.json"; undoStack=[];redoStack=[];selectedScopePath=null;render();toast("JSON을 열었습니다."); }
+    catch(e){ alert("JSON 파싱 오류:\n"+e.message); }
+  }
+  $("#fileInput").onchange=e=>e.target.files[0]&&loadFile(e.target.files[0]);
+  $("#pasteBtn").onclick=async()=>{ try{ const text=prompt("JSON 원문을 붙여넣어 주세요."); if(text===null)return; data=JSON.parse(text); fileName="pasted-edited.json";undoStack=[];redoStack=[];render(); }catch(e){alert("JSON 파싱 오류:\n"+e.message);} };
+  $("#copyBtn").onclick=async()=>{if(data===null)return;await navigator.clipboard.writeText(JSON.stringify(data,null,2));toast("전체 JSON을 복사했습니다.");};
+  $("#saveBtn").onclick=()=>{if(data===null)return;const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+  $("#undoBtn").onclick=undo; $("#redoBtn").onclick=redo;
+  $("#expandBtn").onclick=()=>$$("details.node").forEach(x=>x.open=true);
+  $("#collapseBtn").onclick=()=>$$("details.node").forEach(x=>x.open=false);
+
+  function walk(v,path=[],cb){
+    cb(v,path);
+    if(v&&typeof v==="object") Object.entries(v).forEach(([k,x])=>walk(x,[...path,Array.isArray(v)?Number(k):k],cb));
+  }
+  function search(q){
+    const out=[]; if(!q||data===null)return out; const low=q.toLowerCase();
+    walk(data,[],(v,p)=>{
+      const key=String(p.at(-1)??""); let hit=key.toLowerCase().includes(low);
+      if(!hit && (typeof v==="string"||typeof v==="number"||typeof v==="boolean")) hit=String(v).toLowerCase().includes(low);
+      if(hit) out.push({path:p,val:v});
+    }); return out.slice(0,200);
+  }
+  $("#searchBtn").onclick=()=>{ const rs=search($("#searchInput").value); $("#searchResults").innerHTML=rs.length?rs.map(r=>`<div class="result"><strong>${esc(fmtPath(r.path))}</strong><div class="muted">${esc(String(r.val).slice(0,180))}</div></div>`).join(""):`<div class="muted">결과 없음</div>`; };
+  $("#searchInput").onkeydown=e=>{if(e.key==="Enter")$("#searchBtn").click();};
+
+
+  // Field-only view
+  function renderFieldFilterChips(){
+    const el=$("#fieldFilterChips");
+    el.innerHTML="";
+    if(!fieldViewFilters.length){
+      el.innerHTML="<span class='muted'>선택된 필드 없음</span>";
+    } else {
+      fieldViewFilters.forEach((f,i)=>{
+        const b=document.createElement("button");
+        b.className="mini";
+        b.textContent=f+" ×";
+        b.onclick=()=>{
+          fieldViewFilters.splice(i,1);
+          renderFieldFilterChips(); renderFieldKeySuggestions();
+        };
+        el.appendChild(b);
+      });
+    }
+    $("#fieldViewBtn").textContent = fieldViewFilters.length
+      ? `필드만 보기 (${fieldViewFilters.length})`
+      : "필드만 보기";
+  }
+
+  function renderFieldKeySuggestions(){
+    const el=$("#fieldKeySuggestions"); if(!el)return;
+    el.innerHTML="";
+    const keys=collectFieldKeys();
+    if(!keys.length){ el.innerHTML="<span class='muted'>JSON을 열면 필드 후보가 표시됩니다.</span>"; return; }
+    keys.forEach(([key,count])=>{
+      const normalized=key.toLowerCase();
+      const b=document.createElement("button"); b.type="button";
+      const selectedIndex=fieldViewFilters.findIndex(f=>String(f).toLowerCase()===normalized);
+      b.className="fieldChoice"+(selectedIndex>=0?" active":"");
+      b.textContent=`${key} (${count})`;
+      b.onclick=()=>{
+        const i=fieldViewFilters.findIndex(f=>String(f).toLowerCase()===normalized);
+        if(i>=0) fieldViewFilters.splice(i,1); else fieldViewFilters.push(key);
+        renderFieldFilterChips(); renderFieldKeySuggestions();
+      };
+      el.appendChild(b);
+    });
+  }
+
+  function addFieldFiltersFromInput(){
+    const raw=$("#fieldFilterInput").value.trim();
+    if(!raw)return;
+    const items=raw.split(",").map(x=>x.trim()).filter(Boolean);
+    for(const x of items){
+      const normalized=x.toLowerCase();
+      if(!fieldViewFilters.some(f=>String(f).toLowerCase()===normalized)) fieldViewFilters.push(x);
+    }
+    $("#fieldFilterInput").value="";
+    renderFieldFilterChips(); renderFieldKeySuggestions();
+  }
+
+  $("#fieldViewBtn").onclick=()=>{
+    renderFieldFilterChips(); renderFieldKeySuggestions();
+    $("#fieldViewSheet").classList.add("show");
+  };
+  $("#addFieldFilterBtn").onclick=addFieldFiltersFromInput;
+  $("#fieldFilterInput").onkeydown=e=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      addFieldFiltersFromInput();
+    }
+  };
+  $("#applyFieldViewBtn").onclick=()=>{
+    addFieldFiltersFromInput();
+    if(!fieldViewFilters.length){
+      toast("표시할 필드를 하나 이상 선택해주세요.");
+      return;
+    }
+    $("#fieldViewSheet").classList.remove("show");
+    render();
+    toast(`${fieldViewFilters.join(", ")} 필드만 표시`);
+  };
+  $("#clearFieldViewBtn").onclick=()=>{
+    fieldViewFilters=[];
+    renderFieldFilterChips(); renderFieldKeySuggestions();
+    $("#fieldViewSheet").classList.remove("show");
+    render();
+    toast("전체 필드 보기로 돌아왔습니다.");
+  };
+
+  // Sheets
+  $$(".navBtn").forEach(b=>b.onclick=()=>$("#"+b.dataset.sheet).classList.add("show"));
+  $$(".drawer").forEach(d=>d.onclick=e=>{if(e.target===d)d.classList.remove("show");});
+  $$(".close").forEach(b=>b.onclick=()=>b.closest(".drawer").classList.remove("show"));
+
+  function updateSelectedScopeInfo(){
+    $("#selectedScopeInfo").textContent=selectedScopePath ? `선택됨: ${fmtPath(selectedScopePath)}` : "트리에서 배열/객체의 ‘범위 선택’을 눌러주세요.";
+    $("#scopeArg").classList.toggle("hidden",$("#scopeMode").value==="selected");
+  }
+  $("#scopeMode").onchange=updateSelectedScopeInfo;
+
+  function addTransform(t={type:"trim"}){
+    transforms.push(t); renderTransforms();
+  }
+  function renderTransforms(){
+    const el=$("#transformList"); el.innerHTML="";
+    transforms.forEach((t,i)=>{
+      const d=document.createElement("div");d.className="pipelineStep";
+      const hd=document.createElement("div");hd.className="stepHd";hd.innerHTML=`<strong>단계 ${i+1}</strong>`;
+      const up=document.createElement("button");up.className="mini";up.textContent="↑";up.disabled=i===0;up.onclick=()=>{[transforms[i-1],transforms[i]]=[transforms[i],transforms[i-1]];renderTransforms();};
+      const dn=document.createElement("button");dn.className="mini";dn.textContent="↓";dn.disabled=i===transforms.length-1;dn.onclick=()=>{[transforms[i+1],transforms[i]]=[transforms[i],transforms[i+1]];renderTransforms();};
+      const rm=document.createElement("button");rm.className="mini";rm.textContent="×";rm.onclick=()=>{transforms.splice(i,1);renderTransforms();}; hd.append(up,dn,rm);d.appendChild(hd);
+      const sel=document.createElement("select");
+      ["trim","regexReplace","removeText","prefix","suffix","lower","upper","dateFormat"].forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent={trim:"Trim",regexReplace:"Regex 치환",removeText:"문자열 제거",prefix:"앞에 추가",suffix:"뒤에 추가",lower:"소문자",upper:"대문자",dateFormat:"날짜 형식 변환"}[x];sel.appendChild(o);});
+      sel.value=t.type;sel.onchange=()=>{t.type=sel.value;renderTransforms();};d.appendChild(sel);
+      if(t.type==="regexReplace"){
+        const a=document.createElement("input");a.placeholder="찾을 Regex";a.value=t.pattern||"";a.oninput=()=>t.pattern=a.value;
+        const b=document.createElement("input");b.placeholder="치환 문자열 ($1 사용 가능)";b.value=t.replace||"";b.oninput=()=>t.replace=b.value;
+        const f=document.createElement("input");f.placeholder="flags (예: g)";f.value=t.flags??"g";f.oninput=()=>t.flags=f.value;d.append(a,b,f);
+      } else if(["removeText","prefix","suffix"].includes(t.type)){
+        const a=document.createElement("input");a.placeholder=t.type==="removeText"?"제거할 문자열":t.type==="prefix"?"앞에 붙일 문자열":"뒤에 붙일 문자열";a.value=t.text||"";a.oninput=()=>t.text=a.value;d.append(a);
+      } else if(t.type==="dateFormat"){
+        const hint=document.createElement("div");hint.className="muted";hint.textContent="간단한 날짜 파서: YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD, 12/24시간 시각을 인식해 출력합니다.";
+        const a=document.createElement("input");a.placeholder="출력 형식";a.value=t.format||"YYYY-MM-DD HH:mm";a.oninput=()=>t.format=a.value;d.append(hint,a);
+      }
+      el.appendChild(d);
+    });
+  }
+  transforms=[]; addTransform({type:"trim"});
+  $("#addTransformBtn").onclick=()=>addTransform({type:"trim"});
+
+  function parseSimpleDate(s){
+    const m=String(s).match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})(?:\D+)?(?:(\d{1,2}):(\d{2})\s*(am|pm)?)?/i);
+    if(!m)return null; let [,Y,M,D,h="0",mi="0",ap]=m; h=Number(h); if(ap){ap=ap.toLowerCase(); if(ap==="pm"&&h<12)h+=12;if(ap==="am"&&h===12)h=0;}
+    return {Y:String(Y),M:String(M).padStart(2,"0"),D:String(D).padStart(2,"0"),H:String(h).padStart(2,"0"),m:String(mi).padStart(2,"0")};
+  }
+  function formatSimpleDate(parts,fmt){ return fmt.replace(/YYYY/g,parts.Y).replace(/MM/g,parts.M).replace(/DD/g,parts.D).replace(/HH/g,parts.H).replace(/mm/g,parts.m); }
+  function applyTransforms(v,steps){
+    let s=String(v??"");
+    for(const t of steps){
+      if(t.type==="trim") s=s.trim();
+      else if(t.type==="regexReplace"){ try{s=s.replace(new RegExp(t.pattern||"",t.flags??"g"),t.replace??"");}catch{} }
+      else if(t.type==="removeText") s=s.split(t.text??"").join("");
+      else if(t.type==="prefix") s=(t.text??"")+s;
+      else if(t.type==="suffix") s=s+(t.text??"");
+      else if(t.type==="lower") s=s.toLowerCase();
+      else if(t.type==="upper") s=s.toUpperCase();
+      else if(t.type==="dateFormat"){const p=parseSimpleDate(s);if(p)s=formatSimpleDate(p,t.format||"YYYY-MM-DD HH:mm");}
+    }
+    return s;
+  }
+  function pathMatch(path,pattern){
+    const normalized=fmtPath(path).replace(/^\$\./,"").replace(/^\$/,"");
+    const rx="^"+pattern.replace(/[.+?^${}()|[\]\\]/g,"\\$&").replace(/\[\*\]/g,"\\[\\d+\\]").replace(/\*/g,"[^.\\[]+")+"$";
+    try{return new RegExp(rx).test(normalized);}catch{return false;}
+  }
+  function getScopeObjects(cfg){
+    const out=[];
+    if(cfg.scopeMode==="selected"){
+      if(!cfg.selectedScopePath) return out; const v=getAtPath(cfg.selectedScopePath);
+      if(Array.isArray(v)) v.forEach((x,i)=>{if(x&&typeof x==="object"&&!Array.isArray(x)) out.push({obj:x,path:[...cfg.selectedScopePath,i]});});
+      else if(v&&typeof v==="object") Object.entries(v).forEach(([k,x])=>{if(x&&typeof x==="object"&&!Array.isArray(x)) out.push({obj:x,path:[...cfg.selectedScopePath,k]});});
+    } else if(cfg.scopeMode==="key"){
+      walk(data,[],(v,p)=>{if(v&&typeof v==="object"&&!Array.isArray(v)&&Object.prototype.hasOwnProperty.call(v,cfg.scopeArg)) out.push({obj:v,path:p});});
+    } else {
+      walk(data,[],(v,p)=>{if(v&&typeof v==="object"&&!Array.isArray(v)&&pathMatch(p,cfg.scopeArg)) out.push({obj:v,path:p});});
+    }
+    return out;
+  }
+  function currentPipeline(){
+    return {
+      name:"",
+      scopeMode:$("#scopeMode").value,
+      scopeArg:$("#scopeArg").value.trim(),
+      selectedScopePath:selectedScopePath?[...selectedScopePath]:null,
+      sourceField:$("#sourceField").value.trim(),
+      targetField:$("#targetField").value.trim(),
+      extractRegex:$("#extractRegex").value,
+      regexFlags:$("#regexFlags").value,
+      captureGroup:Number($("#captureGroup").value)||0,
+      removeMatch:$("#removeMatch").checked,
+      transforms:clone(transforms)
+    };
+  }
+  function runPipeline(cfg, mutate=false){
+    const objs=getScopeObjects(cfg), changes=[];
+    let re=null; try{re=new RegExp(cfg.extractRegex,cfg.regexFlags||"");}catch(e){throw new Error("Regex 오류: "+e.message);}
+    for(const {obj,path} of objs){
+      if(typeof obj[cfg.sourceField]!=="string")continue;
+      const src=obj[cfg.sourceField], m=src.match(re); if(!m)continue;
+      const captured=m[cfg.captureGroup]; if(captured===undefined)continue;
+      const transformed=applyTransforms(captured,cfg.transforms);
+      const newSrc=cfg.removeMatch ? src.replace(re,"") : src;
+      const oldTarget=obj[cfg.targetField];
+      changes.push({path,sourceBefore:src,sourceAfter:newSrc,targetBefore:oldTarget,targetAfter:transformed});
+      if(mutate){obj[cfg.targetField]=transformed;if(cfg.removeMatch)obj[cfg.sourceField]=newSrc;}
+    }
+    return changes;
+  }
+  function previewText(changes){
+    if(!changes.length)return "변경 예정 항목이 없습니다.";
+    const shown=changes.slice(0,40).map((c,i)=>`#${i+1} ${fmtPath(c.path)}
+${$("#sourceField").value}: ${JSON.stringify(c.sourceBefore)} → ${JSON.stringify(c.sourceAfter)}
+${$("#targetField").value}: ${JSON.stringify(c.targetBefore)} → ${JSON.stringify(c.targetAfter)}`).join("\n\n");
+    return `변경 예정: ${changes.length}개\n\n${shown}${changes.length>40?`\n\n… ${changes.length-40}개 더 있음`:""}`;
+  }
+  $("#previewPipelineBtn").onclick=()=>{try{$("#pipelinePreview").textContent=previewText(runPipeline(currentPipeline(),false));}catch(e){alert(e.message);}};
+  $("#applyPipelineBtn").onclick=()=>{if(data===null)return;try{const cfg=currentPipeline();beginBatch("pipeline");const changes=runPipeline(cfg,true);endBatch();render();$("#pipelinePreview").textContent=previewText(changes);toast(`${changes.length}개 변경 적용`);}catch(e){batchSnapshot=null;batchDepth=0;alert(e.message);}};
+
+  const LS_P="jsonAtelier.pipelines.v1", LS_R="jsonAtelier.recipes.v1";
+  const loadP=()=>JSON.parse(localStorage.getItem(LS_P)||"[]"), saveP=x=>localStorage.setItem(LS_P,JSON.stringify(x));
+  const loadR=()=>JSON.parse(localStorage.getItem(LS_R)||"[]"), saveR=x=>localStorage.setItem(LS_R,JSON.stringify(x));
+  $("#savePipelineBtn").onclick=()=>{
+    const name=prompt("Pipeline 이름"); if(!name)return; const arr=loadP(); const cfg=currentPipeline(); cfg.name=name; cfg.selectedScopePath=null; // 파일마다 선택 범위가 달라질 수 있으므로 재선택
+    arr.push(cfg);saveP(arr);renderSaved();toast("Pipeline 저장됨");
+  };
+  function loadPipelineIntoUI(p){
+    $("#scopeMode").value=p.scopeMode;$("#scopeArg").value=p.scopeArg||"";selectedScopePath=p.selectedScopePath||null;
+    $("#sourceField").value=p.sourceField;$("#targetField").value=p.targetField;$("#extractRegex").value=p.extractRegex;$("#regexFlags").value=p.regexFlags;$("#captureGroup").value=p.captureGroup;$("#removeMatch").checked=p.removeMatch;
+    transforms=clone(p.transforms||[]);renderTransforms();updateSelectedScopeInfo();$("#savedSheet").classList.remove("show");$("#pipelineSheet").classList.add("show");
+  }
+  function renderSaved(){
+    const arr=loadP(), el=$("#savedPipelines"); el.innerHTML=arr.length?"":"<div class='muted'>저장된 Pipeline이 없습니다.</div>";
+    arr.forEach((p,i)=>{const d=document.createElement("div");d.className="card";d.innerHTML=`<strong>${esc(p.name)}</strong><div class="muted">${esc(p.sourceField)} → ${esc(p.targetField)} · ${p.transforms.length} transform</div>`;
+      const row=document.createElement("div");row.className="minirow";const use=document.createElement("button");use.className="btn";use.textContent="불러오기";use.onclick=()=>loadPipelineIntoUI(p);
+      const del=document.createElement("button");del.className="btn danger";del.textContent="삭제";del.onclick=()=>{const a=loadP();a.splice(i,1);saveP(a);renderSaved();renderRecipes();};row.append(use,del);d.appendChild(row);el.appendChild(d);});
+    renderRecipeChecks();
+  }
+  function renderRecipeChecks(){
+    const ps=loadP(), el=$("#recipeChecks"); el.innerHTML=ps.length?"":"<div class='muted'>먼저 Pipeline을 저장해주세요.</div>";
+    ps.forEach((p,i)=>{const lab=document.createElement("label");lab.className="toggle";lab.innerHTML=`<input type="checkbox" value="${i}"> ${esc(p.name)}`;el.appendChild(lab);});
+  }
+  $("#saveRecipeBtn").onclick=()=>{const name=$("#recipeName").value.trim();const ids=$$("#recipeChecks input:checked").map(x=>Number(x.value));if(!name||!ids.length)return alert("이름과 Pipeline을 선택해주세요.");const rs=loadR();rs.push({name,pipelineIndexes:ids});saveR(rs);renderRecipes();toast("Recipe 저장됨");};
+  function renderRecipes(){
+    renderRecipeChecks();const rs=loadR(),ps=loadP(),el=$("#savedRecipes");el.innerHTML=rs.length?"":"<div class='muted'>저장된 Recipe가 없습니다.</div>";
+    rs.forEach((r,i)=>{const d=document.createElement("div");d.className="card";d.innerHTML=`<strong>${esc(r.name)}</strong><div class="muted">${r.pipelineIndexes.map(x=>ps[x]?.name).filter(Boolean).join(" → ")}</div>`;
+      const row=document.createElement("div");row.className="minirow";const run=document.createElement("button");run.className="btn primary";run.textContent="실행";
+      run.onclick=()=>{if(data===null)return;beginBatch("recipe");let total=0;try{for(const idx of r.pipelineIndexes){const p=ps[idx];if(!p)continue; if(p.scopeMode==="selected") p.selectedScopePath=selectedScopePath; total+=runPipeline(p,true).length;}endBatch();render();toast(`Recipe 완료 · ${total}개 변경`);}catch(e){batchSnapshot=null;batchDepth=0;alert(e.message);}};
+      const del=document.createElement("button");del.className="btn danger";del.textContent="삭제";del.onclick=()=>{const a=loadR();a.splice(i,1);saveR(a);renderRecipes();};row.append(run,del);d.appendChild(row);el.appendChild(d);});
+  }
+  renderSaved();renderRecipes();
+  renderFieldFilterChips(); renderFieldKeySuggestions();
+  applyTheme(currentTheme,false);
+
+  $("#validateBtn").onclick=()=>data===null?toast("JSON이 없습니다."):toast("현재 데이터 구조는 유효합니다.");
+  $("#formatBtn").onclick=()=>{if(data!==null){pushHistory("format");data=JSON.parse(JSON.stringify(data));render();toast("다시 포맷했습니다.");}};
+  $("#findEmptyBtn").onclick=()=>{if(data===null)return;const rs=[];walk(data,[],(v,p)=>{if(v===null||v===""||(Array.isArray(v)&&!v.length)||(v&&typeof v==="object"&&!Array.isArray(v)&&!Object.keys(v).length))rs.push({p,v});});$("#toolsSheet").classList.remove("show");$("#searchResults").innerHTML=rs.slice(0,200).map(r=>`<div class="result"><strong>${esc(fmtPath(r.p))}</strong><div class="muted">${esc(JSON.stringify(r.v))}</div></div>`).join("")||"<div class='muted'>빈 값 없음</div>";};
+  $("#clearSavedBtn").onclick=()=>{if(confirm("저장된 Pipeline과 Recipe를 모두 삭제할까요?")){localStorage.removeItem(LS_P);localStorage.removeItem(LS_R);renderSaved();renderRecipes();toast("삭제됨");}};
+
+  render();
+})();
+</script>
+</body>
+</html>
