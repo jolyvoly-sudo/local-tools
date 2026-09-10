@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Local Tools</title>
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#17191b;
+  --surface:#202326;
+  --surface-2:#2a2e32;
+  --border:#454a50;
+  --text:#e4e7ea;
+  --muted:#a7adb4;
+  --strong:#f5f6f7;
+  --accent:#c58c92;
+  --accent-2:#69737d;
+  --shadow:0 10px 28px rgba(0,0,0,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100dvh}
+button,a{font:inherit}
+a{text-decoration:none;color:inherit}
+.shell{max-width:980px;margin:0 auto;padding:22px 16px calc(36px + env(safe-area-inset-bottom))}
+.top{
+  display:flex;align-items:flex-start;gap:14px;margin-bottom:22px;
+}
+.titleWrap{flex:1;min-width:0}
+h1{margin:0;font-size:clamp(28px,6vw,46px);letter-spacing:-.04em;line-height:1}
+.subtitle{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.6}
+.themeBtn{
+  flex:0 0 auto;border:1px solid var(--border);background:var(--surface);
+  color:var(--text);border-radius:8px;min-height:42px;padding:8px 11px;
+}
+.sectionTitle{
+  margin:26px 0 10px;font-size:13px;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--muted);font-weight:800
+}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+.card{
+  display:block;border:1px solid var(--border);background:var(--surface);
+  border-radius:10px;padding:16px;box-shadow:var(--shadow);
+  transition:transform .15s ease,border-color .15s ease,background .15s ease;
+}
+.card:active{transform:scale(.992)}
+.card:hover{border-color:var(--accent-2)}
+.cardTop{display:flex;align-items:center;gap:10px}
+.icon{
+  width:38px;height:38px;border-radius:8px;background:var(--surface-2);
+  border:1px solid var(--border);display:grid;place-items:center;font-size:20px;flex:0 0 auto
+}
+.cardName{font-weight:850;font-size:18px;letter-spacing:-.02em}
+.arrow{margin-left:auto;color:var(--muted);font-size:20px}
+.desc{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.55}
+.meta{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{
+  border:1px solid var(--border);background:var(--surface-2);
+  color:var(--muted);border-radius:999px;padding:4px 8px;font-size:11px
+}
+.card.featured{border-color:color-mix(in srgb,var(--accent) 55%,var(--border))}
+.card.featured .icon{background:color-mix(in srgb,var(--accent) 20%,var(--surface-2))}
+.smallGrid{display:grid;grid-template-columns:1fr;gap:10px}
+.smallCard{
+  border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:13px 14px;
+  display:flex;align-items:center;gap:10px
+}
+.smallCard .name{font-weight:800}
+.smallCard .note{margin-left:auto;color:var(--muted);font-size:12px}
+.footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;line-height:1.6}
+.themeMenu{
+  position:fixed;inset:0;background:#0007;display:none;align-items:flex-end;z-index:20
+}
+.themeMenu.show{display:flex}
+.sheet{
+  width:100%;background:var(--surface);border-top:1px solid var(--border);
+  border-radius:14px 14px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom))
+}
+.sheetHead{display:flex;align-items:center;margin-bottom:10px}
+.sheetHead strong{margin-right:auto}
+.close{border:1px solid var(--border);background:var(--surface-2);color:var(--text);border-radius:8px;width:38px;height:38px}
+.themeList{display:grid;gap:8px}
+.themeOpt{
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text);
+  border-radius:8px;padding:10px 11px;text-align:left;display:flex;align-items:center;gap:10px
+}
+.swatches{display:flex;gap:4px;margin-left:auto}
+.swatches i{width:16px;height:16px;border-radius:4px;border:1px solid #0002}
+@media(min-width:720px){
+  .grid{grid-template-columns:repeat(3,1fr)}
+  .smallGrid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="titleWrap">
+      <h1>Local Tools</h1>
+      <div class="subtitle">Small browser-based tools for editing, analyzing, and tinkering locally.</div>
+    </div>
+    <button class="themeBtn" id="themeBtn">Theme</button>
+  </header>
+
+  <div class="sectionTitle">Frequently used</div>
+  <section class="grid">
+    <a class="card featured" href="./json-atelier/">
+      <div class="cardTop">
+        <div class="icon">⌘</div>
+        <div class="cardName">JSON Atelier</div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="desc">Browse, edit, filter, and transform JSON with reusable pipelines and recipes.</div>
+      <div class="meta">
+        <span class="tag">JSON</span>
+        <span class="tag">Transform</span>
+        <span class="tag">Mobile</span>
+      </div>
+    </a>
+
+    <a class="card" href="./retrieval-report-viewer/">
+      <div class="cardTop">
+        <div class="icon">◎</div>
+        <div class="cardName">Retrieval Report Viewer</div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="desc">Inspect Hypirk retrieval runs, ranking signals, traces, and debugging data.</div>
+      <div class="meta">
+        <span class="tag">Hypirk</span>
+        <span class="tag">Debug</span>
+        <span class="tag">Analysis</span>
+      </div>
+    </a>
+
+    <a class="card" href="./magazine-editor/">
+      <div class="cardTop">
+        <div class="icon">▤</div>
+        <div class="cardName">Magazine Editor</div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="desc">Style and preview HTML / Markdown magazine layouts with reusable palettes and blocks.</div>
+      <div class="meta">
+        <span class="tag">HTML</span>
+        <span class="tag">Markdown</span>
+        <span class="tag">Layout</span>
+      </div>
+    </a>
+  </section>
+
+  <div class="sectionTitle">Experiments</div>
+  <section class="smallGrid">
+    <a class="smallCard" href="./tokenizer-probe/">
+      <div class="icon">⌁</div>
+      <div>
+        <div class="name">Tokenizer Probe</div>
+        <div class="desc" style="margin-top:3px">Tokenizer loading / access experiments.</div>
+      </div>
+      <div class="note">lab</div>
+    </a>
+  </section>
+
+  <div class="footer">
+    Everything here is designed to run in the browser. Tool-specific data handling depends on each app.
+  </div>
+</div>
+
+<div class="themeMenu" id="themeMenu">
+  <div class="sheet">
+    <div class="sheetHead"><strong>Theme</strong><button class="close" id="closeTheme">×</button></div>
+    <div class="themeList" id="themeList"></div>
+  </div>
+</div>
+
+<script>
+const themes = {
+  graphite:{
+    label:"Graphite",
+    vars:{bg:"#17191b",surface:"#202326",surface2:"#2a2e32",border:"#454a50",text:"#e4e7ea",muted:"#a7adb4",strong:"#f5f6f7",accent:"#c58c92",accent2:"#69737d"},
+    sw:["#17191b","#202326","#2a2e32","#69737d","#c58c92"]
+  },
+  ivory:{
+    label:"Ivory",
+    vars:{bg:"#f4f3ef",surface:"#fffefa",surface2:"#e8e9e5",border:"#c9ccc8",text:"#25282b",muted:"#62676c",strong:"#304957",accent:"#9b5057",accent2:"#4f6575"},
+    sw:["#f4f3ef","#fffefa","#e8e9e5","#4f6575","#9b5057"]
+  },
+  kitty:{
+    label:"Kitty Classic",
+    vars:{bg:"#f8f3ee",surface:"#fffdfa",surface2:"#f1e8e1",border:"#dbcfc5",text:"#30292a",muted:"#726767",strong:"#6d3a41",accent:"#d9414e",accent2:"#3d74d8"},
+    sw:["#f8f3ee","#fffdfa","#d9414e","#3d74d8","#f1cb3d"]
+  },
+  cocoa:{
+    label:"Cocoa Night",
+    vars:{bg:"#1b1715",surface:"#251f1c",surface2:"#312926",border:"#3a302b",text:"#d8cdc6",muted:"#a8978f",strong:"#e4d9d2",accent:"#a86573",accent2:"#815b49"},
+    sw:["#1b1715","#251f1c","#312926","#815b49","#a86573"]
+  },
+  cherry:{
+    label:"Cherry Butter",
+    vars:{bg:"#ebe0de",surface:"#fffcf4",surface2:"#eeefed",border:"#c0c2c1",text:"#2a2227",muted:"#525a56",strong:"#372930",accent:"#6c0e15",accent2:"#f2e0a0"},
+    sw:["#ebe0de","#fffcf4","#eeefed","#6c0e15","#f2e0a0"]
+  }
+};
+
+function applyTheme(key){
+  const t=themes[key]||themes.graphite;
+  const r=document.documentElement.style;
+  r.setProperty("--bg",t.vars.bg);
+  r.setProperty("--surface",t.vars.surface);
+  r.setProperty("--surface-2",t.vars.surface2);
+  r.setProperty("--border",t.vars.border);
+  r.setProperty("--text",t.vars.text);
+  r.setProperty("--muted",t.vars.muted);
+  r.setProperty("--strong",t.vars.strong);
+  r.setProperty("--accent",t.vars.accent);
+  r.setProperty("--accent-2",t.vars.accent2);
+  document.documentElement.style.colorScheme = ["graphite","cocoa"].includes(key) ? "dark" : "light";
+  localStorage.setItem("localToolsTheme",key);
+}
+
+const themeList=document.getElementById("themeList");
+Object.entries(themes).forEach(([key,t])=>{
+  const b=document.createElement("button");
+  b.className="themeOpt";
+  b.innerHTML=`<span>${t.label}</span><span class="swatches">${t.sw.map(c=>`<i style="background:${c}"></i>`).join("")}</span>`;
+  b.onclick=()=>{applyTheme(key);document.getElementById("themeMenu").classList.remove("show")};
+  themeList.appendChild(b);
+});
+
+document.getElementById("themeBtn").onclick=()=>document.getElementById("themeMenu").classList.add("show");
+document.getElementById("closeTheme").onclick=()=>document.getElementById("themeMenu").classList.remove("show");
+document.getElementById("themeMenu").onclick=e=>{if(e.target.id==="themeMenu")e.currentTarget.classList.remove("show")};
+
+applyTheme(localStorage.getItem("localToolsTheme")||"graphite");
+</script>
+</body>
+</html>
