@@ -1,0 +1,1716 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>매거진 HTML 제조기</title>
+<style>
+  :root {
+    --section-bg: #8A817C;
+    --section-text: #CAD2C5;
+    --body-text: #463F3A;
+    --paper-bg: #BCB8B1;
+
+    --ui-bg: #f4f2ef;
+    --ui-card: #ffffff;
+    --ui-border: #d4d0cb;
+    --ui-muted: #756e68;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ui-bg);
+    color: #2d2926;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .app {
+    width: min(1180px, calc(100% - 24px));
+    margin: 24px auto 48px;
+  }
+
+  .top { margin-bottom: 18px; }
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 1.45rem;
+  }
+
+  .desc {
+    margin: 0;
+    color: var(--ui-muted);
+    font-size: .92rem;
+    line-height: 1.55;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 0;
+  }
+
+  button, select {
+    min-height: 42px;
+    border: 1px solid var(--ui-border);
+    border-radius: 9px;
+    background: #fff;
+    color: #302c29;
+    padding: 9px 13px;
+    font: inherit;
+  }
+
+  button {
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  button:hover { background: #ebe7e2; }
+
+  button:disabled {
+    cursor: default;
+    color: #aaa39d;
+    background: #f4f1ee;
+  }
+
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid rgba(138,129,124,.28);
+    outline-offset: 2px;
+  }
+
+  .primary {
+    background: var(--section-bg);
+    color: #fff;
+    border-color: var(--section-bg);
+  }
+
+  .primary:hover { background: #766e69; }
+
+  .danger { color: #7e3939; }
+
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+    gap: 14px;
+  }
+
+  .settings-subpanel {
+    min-width: 0;
+    border: 1px solid #e0dcd7;
+    border-radius: 10px;
+    padding: 12px;
+    background: #faf9f7;
+  }
+
+  .settings-subpanel h3 {
+    margin: 0 0 10px;
+    font-size: .92rem;
+  }
+
+  .palette-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .palette-btn {
+    min-width: 155px;
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+    background: #fff;
+    padding: 9px 10px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .palette-btn.active {
+    border-color: #8A817C;
+    box-shadow: inset 0 0 0 2px rgba(138,129,124,0.18);
+    background: #faf8f5;
+  }
+
+  .palette-btn-name {
+    display: block;
+    margin-bottom: 7px;
+    font-size: .82rem;
+    font-weight: 800;
+    color: #3d3733;
+  }
+
+  .palette-swatches {
+    display: flex;
+    gap: 5px;
+  }
+
+  .palette-swatches span {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 1px solid rgba(0,0,0,0.12);
+    display: inline-block;
+  }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px 12px;
+  }
+
+  .color-field { min-width: 0; }
+
+  .color-field label,
+  .field-label {
+    display: block;
+    margin: 0 0 5px;
+    color: #5f5852;
+    font-size: .78rem;
+    font-weight: 750;
+  }
+
+  .color-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  input[type="color"] {
+    width: 42px;
+    height: 42px;
+    padding: 3px;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .save-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .saved-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  .width-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 78px;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  input[type="range"] { width: 100%; }
+
+  .width-value {
+    text-align: center;
+    padding: 7px 8px;
+    border-radius: 8px;
+    background: #eeeae6;
+    font-size: .84rem;
+    font-weight: 800;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .panel {
+    min-width: 0;
+    background: var(--ui-card);
+    border: 1px solid var(--ui-border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .panel-title h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  #blocks {
+    display: grid;
+    gap: 14px;
+  }
+
+  .empty {
+    border: 1px dashed var(--ui-border);
+    border-radius: 10px;
+    padding: 24px 14px;
+    color: var(--ui-muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .group {
+    border: 1px solid #cbc5bf;
+    border-radius: 12px;
+    background: #f1eeea;
+    padding: 9px;
+  }
+
+  .group + .group {
+    margin-top: 2px;
+  }
+
+  .group-label {
+    margin: 1px 3px 8px;
+    color: #817971;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+  }
+
+  .group-blocks {
+    display: grid;
+    gap: 8px;
+  }
+
+  .block {
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+    background: #faf9f7;
+    padding: 12px;
+  }
+
+  .block.section-card {
+    border-color: #aaa19a;
+    background: #ece8e4;
+  }
+
+  .block-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 9px;
+  }
+
+  .type-select {
+    min-height: 34px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    font-size: .84rem;
+    font-weight: 750;
+    background: #e6e1dc;
+    border-color: #d8d2cc;
+  }
+
+  .block-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .block-actions button {
+    min-height: 32px;
+    padding: 4px 8px;
+    border-radius: 7px;
+    font-size: .78rem;
+  }
+
+  label {
+    display: block;
+    margin: 8px 0 5px;
+    color: #5f5852;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+
+  input, textarea {
+    width: 100%;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    background: #fff;
+    color: #292521;
+    padding: 9px 10px;
+    font: inherit;
+    font-size: 16px;
+  }
+
+  textarea {
+    min-height: 92px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  .preview-wrap {
+    background: #e9e6e2;
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  #preview {
+    width: min(100%, 720px);
+    margin: 0 auto;
+    background: transparent;
+  }
+
+  .code-area { margin-top: 18px; }
+
+  .code-area textarea {
+    min-height: 230px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre;
+  }
+
+  .status {
+    min-height: 1.4em;
+    margin: 8px 2px 0;
+    color: var(--ui-muted);
+    font-size: .82rem;
+  }
+
+  @media (max-width: 880px) {
+    .settings-grid,
+
+    .app {
+      width: min(100% - 16px, 720px);
+      margin-top: 14px;
+    }
+
+    .layout { grid-template-columns: 1fr; }
+    .toolbar button { flex: 1 1 calc(50% - 8px); }
+  }
+
+  @media (max-width: 520px) {
+    .toolbar button { flex-basis: 100%; }
+    .color-grid { grid-template-columns: 1fr; }
+    .save-row,
+    .saved-row { grid-template-columns: 1fr; }
+    .panel { padding: 10px; }
+    .preview-wrap { padding: 8px; }
+
+    .block-head {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .type-select { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <section class="top">
+    <h1>매거진 HTML 제조기</h1>
+    <p class="desc">
+      대분류는 하나의 그룹을 만듭니다. ‘대분류 세트 추가’를 누르면
+      대분류·중분류·소제목·본문·접기·박스가 빈 세트로 한 번에 추가됩니다.
+      각 블록은 종류를 자유롭게 바꿀 수 있고, 대분류에서는 그룹 전체를 위아래로 이동할 수 있습니다.
+      본문·접기·박스에서는 **볼드**, *이탤릭*, `인라인 코드`, ```코드블럭``` 문법을 사용할 수 있습니다. 코드블럭은 긴 줄도 지면 안에서 자연스럽게 줄바꿈됩니다. 팔레트와 지면 폭도 직접 조절할 수 있습니다.
+    </p>
+  </section>
+
+
+  <section class="panel" style="margin-bottom: 14px;">
+    <div class="panel-title">
+      <h2>테마 · 지면 설정</h2>
+    </div>
+
+    <div class="settings-grid">
+      <div class="settings-subpanel">
+        <h3>팔레트 프리셋</h3>
+        <div class="palette-bar" id="paletteBar"></div>
+
+        <div class="width-row">
+          <div>
+            <span class="field-label">지면 폭</span>
+            <input id="widthRange" type="range" min="55" max="100" step="1" value="100">
+          </div>
+          <div class="width-value" id="widthValue">100%</div>
+        </div>
+      </div>
+
+      <div class="settings-subpanel">
+        <h3>사용자 정의 팔레트</h3>
+
+        <div class="color-grid">
+          <div class="color-field"><label>대분류 배경</label><div class="color-row"><input type="color" data-color-picker="sectionBg"><input type="text" data-color-text="sectionBg" maxlength="7"></div></div>
+          <div class="color-field"><label>대분류 글자</label><div class="color-row"><input type="color" data-color-picker="sectionText"><input type="text" data-color-text="sectionText" maxlength="7"></div></div>
+          <div class="color-field"><label>본문 배경</label><div class="color-row"><input type="color" data-color-picker="paperBg"><input type="text" data-color-text="paperBg" maxlength="7"></div></div>
+          <div class="color-field"><label>본문 글자</label><div class="color-row"><input type="color" data-color-picker="bodyText"><input type="text" data-color-text="bodyText" maxlength="7"></div></div>
+          <div class="color-field"><label>접기 배경</label><div class="color-row"><input type="color" data-color-picker="detailsBg"><input type="text" data-color-text="detailsBg" maxlength="7"></div></div>
+          <div class="color-field"><label>접기 글자</label><div class="color-row"><input type="color" data-color-picker="detailsText"><input type="text" data-color-text="detailsText" maxlength="7"></div></div>
+          <div class="color-field"><label>박스 배경</label><div class="color-row"><input type="color" data-color-picker="boxBg"><input type="text" data-color-text="boxBg" maxlength="7"></div></div>
+          <div class="color-field"><label>박스 글자</label><div class="color-row"><input type="color" data-color-picker="boxText"><input type="text" data-color-text="boxText" maxlength="7"></div></div>
+        </div>
+
+        <div class="save-row">
+          <input type="text" id="paletteName" placeholder="팔레트 이름">
+          <button type="button" id="savePaletteBtn">팔레트 저장</button>
+        </div>
+
+        <div class="saved-row">
+          <select id="savedPaletteSelect" aria-label="저장된 팔레트"><option value="">저장된 팔레트 없음</option></select>
+          <button type="button" id="loadPaletteBtn">불러오기</button>
+          <button type="button" id="deletePaletteBtn" class="danger">삭제</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar" aria-label="블록 추가">
+    <button type="button" class="primary" id="addPresetBtn">＋ 대분류 세트 추가</button>
+    <button type="button" data-add="middle">＋ 중분류</button>
+    <button type="button" data-add="subtitle">＋ 소제목</button>
+    <button type="button" data-add="body">＋ 본문</button>
+    <button type="button" data-add="details">＋ 접기</button>
+    <button type="button" data-add="box">＋ 박스</button>
+    <button type="button" id="clearBtn" class="danger">전체 초기화</button>
+  </div>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="panel-title">
+        <h2>내용 편집</h2>
+        <span id="countLabel">0개</span>
+      </div>
+
+      <div id="blocks">
+        <div class="empty">‘대분류 세트 추가’를 누르면<br>빈 블록 세트가 한 번에 생깁니다.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>미리보기</h2>
+      </div>
+
+      <div class="preview-wrap">
+        <div id="preview">
+          <div class="empty">아직 미리볼 내용이 없습니다.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel code-area">
+    <div class="panel-title">
+      <h2>생성 HTML</h2>
+      <div>
+        <button type="button" id="copyBtn">HTML 복사</button>
+        <button type="button" id="downloadBtn">결과 저장</button>
+      </div>
+    </div>
+
+    <textarea id="output" readonly spellcheck="false" aria-label="생성된 HTML"></textarea>
+    <p class="status" id="status" aria-live="polite"></p>
+  </section>
+</main>
+
+<script>
+(() => {
+  const blocksEl = document.getElementById('blocks');
+  const previewEl = document.getElementById('preview');
+  const outputEl = document.getElementById('output');
+  const statusEl = document.getElementById('status');
+  const countLabel = document.getElementById('countLabel');
+
+  const paletteBar = document.getElementById('paletteBar');
+  const widthRange = document.getElementById('widthRange');
+  const widthValue = document.getElementById('widthValue');
+  const paletteName = document.getElementById('paletteName');
+  const savedPaletteSelect = document.getElementById('savedPaletteSelect');
+
+  const STORAGE_PALETTES = 'magazine_html_builder_palettes_v1';
+  const STORAGE_WIDTH = 'magazine_html_builder_width_v1';
+
+  const palettes = {
+    classic: {
+      name: '기본',
+      sectionBg: '#8A817C', sectionText: '#CAD2C5',
+      paperBg: '#BCB8B1', bodyText: '#463F3A',
+      detailsBg: '#8A817C', detailsText: '#CAD2C5',
+      boxBg: '#CAD2C5', boxText: '#463F3A'
+    },
+    navyTaupe: {
+      name: 'Palette 1',
+      sectionBg: '#355070', sectionText: '#E4CCBF',
+      paperBg: '#9B8A81', bodyText: '#253A54',
+      detailsBg: '#355070', detailsText: '#E4CCBF',
+      boxBg: '#E4CCBF', boxText: '#253A54'
+    },
+    greenSlate: {
+      name: 'Palette 2',
+      sectionBg: '#52796F', sectionText: '#CAD2C5',
+      paperBg: '#2F3E46', bodyText: '#CAD2C5',
+      detailsBg: '#52796F', detailsText: '#CAD2C5',
+      boxBg: '#52796F', boxText: '#CAD2C5'
+    }
+  };
+
+  let currentPalette = JSON.parse(JSON.stringify(palettes.classic));
+  let currentPresetKey = 'classic';
+  let outputWidth = 100;
+
+  const state = [];
+  let nextId = 1;
+
+  const defaults = {
+    section: { label: 'SECTION', text: '' },
+    middle: { label: 'TOPIC', text: '' },
+    subtitle: { label: '', text: '' },
+    body: { label: '', text: '' },
+    details: { label: '', text: '' },
+    box: { label: '', text: '' }
+  };
+
+  const names = {
+    section: '대분류',
+    middle: '중분류',
+    subtitle: '소제목',
+    body: '본문',
+    details: '접기',
+    box: '박스'
+  };
+
+
+  function clonePalette(p) {
+    return JSON.parse(JSON.stringify(p));
+  }
+
+  function normalizeHex(value, fallback = '#000000') {
+    const raw = String(value || '').trim();
+    const withHash = raw.startsWith('#') ? raw : '#' + raw;
+    return /^#[0-9a-fA-F]{6}$/.test(withHash) ? withHash.toUpperCase() : fallback.toUpperCase();
+  }
+
+  function hexToRgba(hex, alpha) {
+    const safe = normalizeHex(hex, '#000000');
+    const r = parseInt(safe.slice(1, 3), 16);
+    const g = parseInt(safe.slice(3, 5), 16);
+    const b = parseInt(safe.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function syncColorControls() {
+    document.querySelectorAll('[data-color-picker]').forEach(input => {
+      const key = input.dataset.colorPicker;
+      input.value = normalizeHex(currentPalette[key], '#000000');
+    });
+
+    document.querySelectorAll('[data-color-text]').forEach(input => {
+      const key = input.dataset.colorText;
+      input.value = normalizeHex(currentPalette[key], '#000000');
+    });
+  }
+
+  function applyPalette(palette, presetKey = null) {
+    currentPalette = clonePalette(palette);
+    currentPresetKey = presetKey;
+    syncColorControls();
+    renderPalettes();
+    renderAll();
+  }
+
+  function updateCustomColor(key, value) {
+    currentPalette[key] = normalizeHex(value, currentPalette[key]);
+    currentPresetKey = null;
+    syncColorControls();
+    renderPalettes();
+    renderAll();
+  }
+
+  function readSavedPalettes() {
+    try {
+      const raw = localStorage.getItem(STORAGE_PALETTES);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeSavedPalettes(data) {
+    localStorage.setItem(STORAGE_PALETTES, JSON.stringify(data));
+  }
+
+  function refreshSavedPaletteSelect() {
+    const saved = readSavedPalettes();
+    const names = Object.keys(saved).sort((a, b) => a.localeCompare(b, 'ko'));
+    savedPaletteSelect.innerHTML = '';
+
+    if (!names.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = '저장된 팔레트 없음';
+      savedPaletteSelect.append(option);
+      return;
+    }
+
+    names.forEach(name => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      savedPaletteSelect.append(option);
+    });
+  }
+
+  function renderPalettes() {
+    paletteBar.innerHTML = '';
+
+    Object.entries(palettes).forEach(([key, palette]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'palette-btn' + (key === currentPresetKey ? ' active' : '');
+
+      const swatches = [
+        palette.sectionBg, palette.sectionText, palette.paperBg, palette.bodyText,
+        palette.detailsBg, palette.detailsText, palette.boxBg, palette.boxText
+      ];
+
+      btn.innerHTML = `
+        <span class="palette-btn-name">${escapeHtml(palette.name)}</span>
+        <div class="palette-swatches">
+          ${swatches.map(c => `<span style="background:${c};"></span>`).join('')}
+        </div>
+      `;
+
+      btn.addEventListener('click', () => {
+        applyPalette(palette, key);
+        statusEl.textContent = `${palette.name} 팔레트를 적용했습니다.`;
+      });
+
+      paletteBar.append(btn);
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function displayText(value, fallback) {
+    const clean = String(value || '').trim();
+    return clean ? escapeHtml(clean) : fallback;
+  }
+
+  function renderInlineMarkdown(text) {
+    const source = String(text || '');
+    const codeTokens = [];
+
+    // 인라인 코드는 먼저 보호해서 내부의 * 문자가 볼드/이탤릭으로 해석되지 않게 합니다.
+    let escaped = escapeHtml(source).replace(/`([^`\n]+)`/g, (_, code) => {
+      const token = `%%INLINE_CODE_${codeTokens.length}%%`;
+      codeTokens.push(
+        `<span style="display: inline-block; padding: 1px 5px; background: ${hexToRgba(currentPalette.bodyText, 0.10)}; border: 1px solid ${hexToRgba(currentPalette.bodyText, 0.18)}; border-radius: 4px; color: inherit; font-family: monospace; font-size: 0.94em;">${code}</span>`
+      );
+      return token;
+    });
+
+    // **볼드**
+    escaped = escaped.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+
+    // *이탤릭*
+    escaped = escaped.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+
+    escaped = escaped.replaceAll('\n', '<br>');
+
+    codeTokens.forEach((html, index) => {
+      escaped = escaped.replace(`%%INLINE_CODE_${index}%%`, html);
+    });
+
+    return escaped;
+  }
+
+  function renderCodeText(text) {
+    const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+
+    return lines.map(line => {
+      const escaped = escapeHtml(line);
+
+      // 앞쪽 들여쓰기는 &nbsp;로 보존합니다.
+      const leadingMatch = escaped.match(/^(\s*)/);
+      const leading = leadingMatch ? leadingMatch[1] : '';
+      const body = escaped.slice(leading.length);
+
+      const indent = leading
+        .replace(/\t/g, '    ')
+        .replace(/ /g, '&nbsp;');
+
+      // 본문 내부의 연속 공백은 모양을 어느 정도 보존하면서도
+      // 일반 공백 지점에서는 브라우저가 줄바꿈할 수 있게 둡니다.
+      const spacedBody = body.replace(/ {2,}/g, spaces => {
+        return '&nbsp;'.repeat(Math.max(0, spaces.length - 1)) + ' ';
+      });
+
+      return indent + spacedBody;
+    }).join('<br>');
+  }
+
+  function splitMarkdownTableRow(line) {
+    const pipeToken = '%%ESCAPED_PIPE%%';
+    let working = String(line || '')
+      .trim()
+      .replace(/\\\|/g, pipeToken);
+
+    if (working.startsWith('|')) working = working.slice(1);
+    if (working.endsWith('|')) working = working.slice(0, -1);
+
+    return working
+      .split('|')
+      .map(cell => cell.trim().replaceAll(pipeToken, '|'));
+  }
+
+  function parseMarkdownTableSeparator(line) {
+    const cells = splitMarkdownTableRow(line);
+    if (!cells.length) return null;
+
+    const compact = cells.map(cell => cell.replace(/\s+/g, ''));
+    if (!compact.every(cell => /^:?-{3,}:?$/.test(cell))) return null;
+
+    return compact.map(cell => {
+      const left = cell.startsWith(':');
+      const right = cell.endsWith(':');
+
+      if (left && right) return 'center';
+      if (right) return 'right';
+      return 'left';
+    });
+  }
+
+  function parseMarkdownTableAt(lines, startIndex) {
+    if (startIndex + 1 >= lines.length) return null;
+
+    const headerLine = lines[startIndex];
+    const separatorLine = lines[startIndex + 1];
+
+    if (!headerLine.includes('|')) return null;
+
+    const alignments = parseMarkdownTableSeparator(separatorLine);
+    if (!alignments) return null;
+
+    const headers = splitMarkdownTableRow(headerLine);
+    if (!headers.length) return null;
+
+    const columnCount = Math.max(headers.length, alignments.length);
+    const normalizedHeaders = Array.from({ length: columnCount }, (_, i) => headers[i] || '');
+    const normalizedAlignments = Array.from(
+      { length: columnCount },
+      (_, i) => alignments[i] || 'left'
+    );
+
+    const rows = [];
+    let index = startIndex + 2;
+
+    while (index < lines.length) {
+      const line = lines[index];
+      if (!line.trim() || !line.includes('|')) break;
+
+      const cells = splitMarkdownTableRow(line);
+
+      rows.push(
+        Array.from({ length: columnCount }, (_, i) => cells[i] || '')
+      );
+
+      index += 1;
+    }
+
+    return {
+      nextIndex: index,
+      block: {
+        type: 'table',
+        headers: normalizedHeaders.map(renderInlineMarkdown),
+        alignments: normalizedAlignments,
+        rows: rows.map(row => row.map(renderInlineMarkdown))
+      }
+    };
+  }
+
+  function renderMarkdownBlocks(text) {
+    const normalized = String(text || '').replace(/\r\n?/g, '\n').trim();
+    if (!normalized) return [];
+
+    const blocks = [];
+    const fencePattern = /```[^\n]*\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match;
+
+    function pushTextChunk(chunk) {
+      const lines = String(chunk || '').replace(/\r\n?/g, '\n').split('\n');
+      let paragraphLines = [];
+
+      function flushParagraph() {
+        const paragraph = paragraphLines.join('\n').trim();
+        paragraphLines = [];
+
+        if (!paragraph) return;
+
+        blocks.push({
+          type: 'paragraph',
+          html: renderInlineMarkdown(paragraph)
+        });
+      }
+
+      let index = 0;
+
+      while (index < lines.length) {
+        const table = parseMarkdownTableAt(lines, index);
+
+        if (table) {
+          flushParagraph();
+          blocks.push(table.block);
+          index = table.nextIndex;
+          continue;
+        }
+
+        if (!lines[index].trim()) {
+          flushParagraph();
+          index += 1;
+          continue;
+        }
+
+        paragraphLines.push(lines[index]);
+        index += 1;
+      }
+
+      flushParagraph();
+    }
+
+    while ((match = fencePattern.exec(normalized)) !== null) {
+      pushTextChunk(normalized.slice(lastIndex, match.index));
+
+      blocks.push({
+        type: 'code',
+        html: renderCodeText(match[1].replace(/\n$/, ''))
+      });
+
+      lastIndex = fencePattern.lastIndex;
+    }
+
+    pushTextChunk(normalized.slice(lastIndex));
+    return blocks;
+  }
+
+  function renderMarkdownTableHtml(block, theme = {}, indent = '', isLast = false) {
+    const headerBg = theme.headerBg || hexToRgba(currentPalette.bodyText, 0.12);
+    const headerText = theme.headerText || 'inherit';
+    const borderColor = theme.borderColor || hexToRgba(currentPalette.bodyText, 0.22);
+    const margin = isLast
+      ? (theme.lastMargin || theme.margin || '0')
+      : (theme.margin || '0 0 12px');
+
+    const headerCells = block.headers.map((cell, index) => {
+      const align = block.alignments[index] || 'left';
+
+      return `${indent}      <th style="padding: 9px 10px; background: ${headerBg}; color: ${headerText}; border-bottom: 2px solid ${borderColor}; text-align: ${align}; vertical-align: top; font-weight: bold;">${cell || '&nbsp;'}</th>`;
+    }).join('\n');
+
+    const bodyRows = block.rows.map(row => {
+      const cells = row.map((cell, index) => {
+        const align = block.alignments[index] || 'left';
+
+        return `${indent}      <td style="padding: 9px 10px; border-bottom: 1px solid ${borderColor}; text-align: ${align}; vertical-align: top;">${cell || '&nbsp;'}</td>`;
+      }).join('\n');
+
+      return `${indent}    <tr>\n${cells}\n${indent}    </tr>`;
+    }).join('\n');
+
+    return `${indent}<table style="border-collapse: collapse; width: 100%; margin: ${margin}; color: inherit; font-size: 1em; line-height: 1.55;">
+${indent}  <thead>
+${indent}    <tr>
+${headerCells}
+${indent}    </tr>
+${indent}  </thead>
+${indent}  <tbody>
+${bodyRows}
+${indent}  </tbody>
+${indent}</table>`;
+  }
+
+  function renderMarkdownBlockHtml(
+    text,
+    paragraphStyle,
+    paragraphLastStyle,
+    codeStyle,
+    indent = '',
+    tableTheme = {}
+  ) {
+    const blocks = renderMarkdownBlocks(text);
+
+    if (!blocks.length) return '';
+
+    return blocks.map((block, index) => {
+      const isLast = index === blocks.length - 1;
+
+      if (block.type === 'code') {
+        return `${indent}<div style="${codeStyle}">${block.html}</div>`;
+      }
+
+      if (block.type === 'table') {
+        return renderMarkdownTableHtml(block, tableTheme, indent, isLast);
+      }
+
+      const style = isLast ? paragraphLastStyle : paragraphStyle;
+      return `${indent}<p style="${style}">${block.html}</p>`;
+    }).join('\n');
+  }
+
+  function makeBlock(type) {
+    return {
+      id: nextId++,
+      type,
+      label: defaults[type].label,
+      text: defaults[type].text
+    };
+  }
+
+  function addBlock(type) {
+    state.push(makeBlock(type));
+    renderEditor();
+    renderAll();
+    focusLastField();
+  }
+
+  function addPreset() {
+    ['section', 'middle', 'subtitle', 'body', 'details', 'box']
+      .forEach(type => state.push(makeBlock(type)));
+
+    renderEditor();
+    renderAll();
+
+    const sections = blocksEl.querySelectorAll('.section-card');
+    const lastSection = sections[sections.length - 1];
+    const field = lastSection && lastSection.querySelector('input');
+    if (field) field.focus();
+
+    statusEl.textContent = '빈 대분류 세트 6개 블록을 추가했습니다.';
+  }
+
+  function focusLastField() {
+    const fields = blocksEl.querySelectorAll('.block input, .block textarea');
+    const last = fields[fields.length - 1];
+    if (last) last.focus();
+  }
+
+  function getGroups() {
+    const groups = [];
+    let current = null;
+
+    state.forEach((block, index) => {
+      if (block.type === 'section') {
+        current = {
+          sectionId: block.id,
+          start: index,
+          end: index + 1,
+          blocks: [block]
+        };
+        groups.push(current);
+      } else if (current) {
+        current.blocks.push(block);
+        current.end = index + 1;
+      } else {
+        if (!groups.length || groups[0].sectionId !== null) {
+          groups.unshift({
+            sectionId: null,
+            start: 0,
+            end: index + 1,
+            blocks: [block]
+          });
+        } else {
+          groups[0].blocks.push(block);
+          groups[0].end = index + 1;
+        }
+      }
+    });
+
+    return groups;
+  }
+
+  function getSectionGroupsOnly() {
+    return getGroups().filter(g => g.sectionId !== null);
+  }
+
+  function findGroupBySectionId(sectionId) {
+    return getGroups().find(g => g.sectionId === sectionId) || null;
+  }
+
+  function moveGroup(sectionId, direction) {
+    const sectionGroups = getSectionGroupsOnly();
+    const currentPos = sectionGroups.findIndex(g => g.sectionId === sectionId);
+
+    if (currentPos < 0) return;
+
+    const targetPos = currentPos + direction;
+    if (targetPos < 0 || targetPos >= sectionGroups.length) return;
+
+    const current = sectionGroups[currentPos];
+    const target = sectionGroups[targetPos];
+
+    const currentSlice = state.slice(current.start, current.end);
+    const targetSlice = state.slice(target.start, target.end);
+
+    if (direction < 0) {
+      state.splice(target.start, current.end - target.start, ...currentSlice, ...targetSlice);
+    } else {
+      state.splice(current.start, target.end - current.start, ...targetSlice, ...currentSlice);
+    }
+
+    renderEditor();
+    renderAll();
+    statusEl.textContent = '대분류 그룹 전체를 이동했습니다.';
+  }
+
+  function changeType(index, newType) {
+    const block = state[index];
+    const oldType = block.type;
+
+    if (oldType === newType) return;
+
+    if (!block.label || block.label === defaults[oldType].label) {
+      block.label = defaults[newType].label;
+    }
+
+    block.type = newType;
+
+    renderEditor();
+    renderAll();
+
+    const current = blocksEl.querySelector(`[data-block-id="${block.id}"]`);
+    const field = current && current.querySelector('input, textarea');
+    if (field) field.focus();
+  }
+
+  function moveBlock(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= state.length) return;
+
+    [state[index], state[target]] = [state[target], state[index]];
+    renderEditor();
+    renderAll();
+  }
+
+  function deleteBlock(index) {
+    state.splice(index, 1);
+    renderEditor();
+    renderAll();
+  }
+
+  function makeTypeSelect(block, index) {
+    const select = document.createElement('select');
+    select.className = 'type-select';
+    select.setAttribute('aria-label', '블록 종류');
+
+    Object.entries(names).forEach(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      option.selected = block.type === value;
+      select.append(option);
+    });
+
+    select.addEventListener('change', e => changeType(index, e.target.value));
+    return select;
+  }
+
+  function addTextInput(card, labelText, value, placeholder, onInput) {
+    const label = document.createElement('label');
+    label.textContent = labelText;
+
+    const input = document.createElement('input');
+    input.value = value;
+    input.placeholder = placeholder;
+    input.addEventListener('input', onInput);
+
+    card.append(label, input);
+  }
+
+  function addTextarea(card, labelText, value, placeholder, onInput) {
+    const label = document.createElement('label');
+    label.textContent = labelText;
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.placeholder = placeholder;
+    textarea.addEventListener('input', onInput);
+
+    card.append(label, textarea);
+  }
+
+  function renderBlockCard(block, index, sectionGroupIndex, sectionGroupCount) {
+    const card = document.createElement('article');
+    card.className = 'block' + (block.type === 'section' ? ' section-card' : '');
+    card.dataset.blockId = block.id;
+
+    const head = document.createElement('div');
+    head.className = 'block-head';
+
+    const typeSelect = makeTypeSelect(block, index);
+    const actions = document.createElement('div');
+    actions.className = 'block-actions';
+
+    if (block.type === 'section') {
+      const groupUp = document.createElement('button');
+      groupUp.type = 'button';
+      groupUp.textContent = '그룹 ↑';
+      groupUp.title = '이 대분류와 소속 블록을 함께 위로 이동';
+      groupUp.disabled = sectionGroupIndex <= 0;
+      groupUp.addEventListener('click', () => moveGroup(block.id, -1));
+
+      const groupDown = document.createElement('button');
+      groupDown.type = 'button';
+      groupDown.textContent = '그룹 ↓';
+      groupDown.title = '이 대분류와 소속 블록을 함께 아래로 이동';
+      groupDown.disabled = sectionGroupIndex < 0 || sectionGroupIndex >= sectionGroupCount - 1;
+      groupDown.addEventListener('click', () => moveGroup(block.id, 1));
+
+      actions.append(groupUp, groupDown);
+    } else {
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.textContent = '↑';
+      up.title = '위로 이동';
+      up.disabled = index === 0;
+      up.addEventListener('click', () => moveBlock(index, -1));
+
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.textContent = '↓';
+      down.title = '아래로 이동';
+      down.disabled = index === state.length - 1;
+      down.addEventListener('click', () => moveBlock(index, 1));
+
+      actions.append(up, down);
+    }
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '삭제';
+    del.className = 'danger';
+    del.addEventListener('click', () => deleteBlock(index));
+    actions.append(del);
+
+    head.append(typeSelect, actions);
+    card.append(head);
+
+    if (block.type === 'section') {
+      addTextInput(
+        card,
+        '작은 라벨',
+        block.label,
+        'SECTION',
+        e => {
+          block.label = e.target.value;
+          renderAll();
+        }
+      );
+
+      addTextInput(
+        card,
+        '대분류 제목',
+        block.text,
+        '대분류 제목',
+        e => {
+          block.text = e.target.value;
+          renderAll();
+        }
+      );
+    }
+
+    if (block.type === 'middle') {
+      addTextInput(
+        card,
+        '작은 라벨',
+        block.label,
+        'TOPIC',
+        e => {
+          block.label = e.target.value;
+          renderAll();
+        }
+      );
+
+      addTextInput(
+        card,
+        '중분류 제목',
+        block.text,
+        '중분류 제목',
+        e => {
+          block.text = e.target.value;
+          renderAll();
+        }
+      );
+    }
+
+    if (block.type === 'subtitle') {
+      addTextInput(
+        card,
+        '소제목',
+        block.text,
+        '소제목',
+        e => {
+          block.text = e.target.value;
+          renderAll();
+        }
+      );
+    }
+
+    if (block.type === 'body') {
+      addTextarea(
+        card,
+        '본문',
+        block.text,
+        '본문 · **볼드** · *이탤릭* · `인라인 코드` · ```코드블럭``` · 마크다운 표',
+        e => {
+          block.text = e.target.value;
+          renderAll();
+        }
+      );
+    }
+
+    if (block.type === 'details') {
+      addTextInput(
+        card,
+        '접기 제목',
+        block.label,
+        '접기 제목',
+        e => {
+          block.label = e.target.value;
+          renderAll();
+        }
+      );
+
+      addTextarea(
+        card,
+        '접기 내용',
+        block.text,
+        '접기 내용 · **볼드** · *이탤릭* · `인라인 코드` · ```코드블럭``` · 마크다운 표',
+        e => {
+          block.text = e.target.value;
+          renderAll();
+        }
+      );
+    }
+
+    if (block.type === 'box') {
+      addTextInput(
+        card,
+        '박스 제목 (선택)',
+        block.label,
+        '비워두면 제목 없이 내용만 표시',
+        e => {
+          block.label = e.target.value;
+          renderAll();
+        }
+      );
+
+      addTextarea(
+        card,
+        '박스 내용',
+        block.text,
+        '박스 내용 · **볼드** · *이탤릭* · `인라인 코드` · ```코드블럭``` · 마크다운 표',
+        e => {
+          block.text = e.target.value;
+          renderAll();
+        }
+      );
+    }
+
+    return card;
+  }
+
+  function renderEditor() {
+    countLabel.textContent = `${state.length}개`;
+
+    if (!state.length) {
+      blocksEl.innerHTML = '<div class="empty">‘대분류 세트 추가’를 누르면<br>빈 블록 세트가 한 번에 생깁니다.</div>';
+      return;
+    }
+
+    blocksEl.innerHTML = '';
+
+    const groups = getGroups();
+    const sectionGroups = groups.filter(g => g.sectionId !== null);
+    const sectionIndexMap = new Map(sectionGroups.map((g, i) => [g.sectionId, i]));
+
+    groups.forEach((group) => {
+      const groupEl = document.createElement('section');
+      groupEl.className = 'group';
+
+      const groupLabel = document.createElement('div');
+      groupLabel.className = 'group-label';
+
+      if (group.sectionId === null) {
+        groupLabel.textContent = '미분류 블록';
+      } else {
+        const num = sectionIndexMap.get(group.sectionId) + 1;
+        groupLabel.textContent = `GROUP ${String(num).padStart(2, '0')}`;
+      }
+
+      const groupBlocks = document.createElement('div');
+      groupBlocks.className = 'group-blocks';
+
+      group.blocks.forEach(block => {
+        const index = state.findIndex(item => item.id === block.id);
+        const sectionGroupIndex = block.type === 'section'
+          ? sectionIndexMap.get(block.id)
+          : -1;
+
+        groupBlocks.append(
+          renderBlockCard(
+            block,
+            index,
+            sectionGroupIndex,
+            sectionGroups.length
+          )
+        );
+      });
+
+      groupEl.append(groupLabel, groupBlocks);
+      blocksEl.append(groupEl);
+    });
+  }
+
+  function buildHtml() {
+    if (!state.length) return '';
+
+    const p = currentPalette;
+    const out = [];
+    let paperOpen = false;
+    let sectionNo = 0;
+
+    function openPaper() {
+      if (paperOpen) return;
+      out.push(`<div style="background: ${p.paperBg}; padding: 26px 24px; color: ${p.bodyText};">`);
+      paperOpen = true;
+    }
+
+    function closePaper() {
+      if (!paperOpen) return;
+      out.push('</div>');
+      paperOpen = false;
+    }
+
+    state.forEach((block) => {
+      if (block.type === 'section') {
+        closePaper();
+        sectionNo += 1;
+
+        const label = (block.label || 'SECTION').trim();
+        const num = String(sectionNo).padStart(2, '0');
+
+        out.push(
+`<div style="background: ${p.sectionBg}; padding: 24px 24px; color: ${p.sectionText};">
+  <p style="margin: 0; font-size: 0.76em; font-weight: bold; letter-spacing: 4px; text-transform: uppercase;">${escapeHtml(label)} ${num}</p>
+  <p style="margin: 6px 0 0; font-size: clamp(1.6em, 5vw, 2.1em); font-weight: bold; line-height: 1.2; letter-spacing: -1px;">${displayText(block.text, '대분류 제목')}</p>
+</div>`
+        );
+        return;
+      }
+
+      openPaper();
+
+      if (block.type === 'middle') {
+        out.push(
+`  <div style="margin: 0 0 20px; padding: 0 0 11px; border-bottom: 2px solid ${p.sectionBg};">
+    <span style="font-size: 0.72em; font-weight: bold; letter-spacing: 3px; color: ${p.sectionBg}; text-transform: uppercase;">${displayText(block.label, 'TOPIC')}</span>
+    <br>
+    <span style="font-size: 1.32em; font-weight: bold; line-height: 1.4;">${displayText(block.text, '중분류 제목')}</span>
+  </div>`
+        );
+      }
+
+      if (block.type === 'subtitle') {
+        out.push(
+`  <p style="margin: 0 0 10px; font-size: 1.12em; font-weight: bold; line-height: 1.45;">${displayText(block.text, '소제목')}</p>`
+        );
+      }
+
+      if (block.type === 'body') {
+        const markdownHtml = renderMarkdownBlockHtml(
+          block.text,
+          'margin: 0 0 12px; font-size: 1em; line-height: 1.85;',
+          'margin: 0 0 24px; font-size: 1em; line-height: 1.85;',
+          `margin: 0 0 24px; padding: 14px 15px; background: ${hexToRgba(p.bodyText, 0.10)}; border-radius: 6px; color: ${p.bodyText}; font-family: monospace; font-size: 0.94em; line-height: 1.65;`,
+          '  ',
+          {
+            headerBg: p.sectionBg,
+            headerText: p.sectionText,
+            borderColor: hexToRgba(p.bodyText, 0.24),
+            margin: '0 0 24px',
+            lastMargin: '0 0 24px'
+          }
+        );
+
+        out.push(markdownHtml || '  <p style="margin: 0 0 24px; font-size: 1em; line-height: 1.85;">본문</p>');
+      }
+
+      if (block.type === 'details') {
+        const detailContent = renderMarkdownBlockHtml(
+          block.text,
+          'margin: 0 0 12px; font-size: 1em; line-height: 1.85;',
+          'margin: 0; font-size: 1em; line-height: 1.85;',
+          `margin: 0; padding: 13px 14px; background: ${hexToRgba(p.detailsText, 0.10)}; border-radius: 6px; color: ${p.detailsText}; font-family: monospace; font-size: 0.94em; line-height: 1.65;`,
+          '      ',
+          {
+            headerBg: p.detailsBg,
+            headerText: p.detailsText,
+            borderColor: hexToRgba(p.detailsText, 0.24),
+            margin: '0 0 12px',
+            lastMargin: '0'
+          }
+        ) || '      <p style="margin: 0; font-size: 1em; line-height: 1.85;">접기 내용</p>';
+
+        out.push(
+`  <div style="margin: 0 0 24px;">
+    <details>
+      <summary style="padding: 11px 14px; background: ${p.detailsBg}; color: ${p.detailsText}; border-radius: 6px; font-weight: bold; line-height: 1.5;">${displayText(block.label, '접기 제목')}</summary>
+      <div style="padding: 15px 16px; background: ${hexToRgba(p.detailsBg, 0.28)}; border: 1px solid ${hexToRgba(p.detailsText, 0.18)}; border-top: none; border-radius: 0 0 6px 6px; color: ${p.detailsText};">
+${detailContent}
+      </div>
+    </details>
+  </div>`
+        );
+      }
+
+      if (block.type === 'box') {
+        const hasTitle = String(block.label || '').trim().length > 0;
+        const titleHtml = hasTitle
+          ? `    <p style="margin: 0 0 8px; font-size: 1.02em; font-weight: bold; line-height: 1.45;">${escapeHtml(block.label.trim())}</p>
+`
+          : '';
+
+        const bodyHtml = renderMarkdownBlockHtml(
+          block.text,
+          'margin: 0 0 10px; font-size: 1em; line-height: 1.75;',
+          'margin: 0; font-size: 1em; line-height: 1.75;',
+          `margin: 0; padding: 12px 13px; background: ${hexToRgba(p.boxText, 0.10)}; border-radius: 5px; color: ${p.boxText}; font-family: monospace; font-size: 0.94em; line-height: 1.65;`,
+          '    ',
+          {
+            headerBg: hexToRgba(p.boxText, 0.12),
+            headerText: p.boxText,
+            borderColor: hexToRgba(p.boxText, 0.24),
+            margin: '0 0 10px',
+            lastMargin: '0'
+          }
+        ) || '    <p style="margin: 0; font-size: 1em; line-height: 1.75;">박스 내용</p>';
+
+        out.push(
+`  <div style="margin: 0 0 24px; padding: 15px 16px; background: ${p.boxBg}; border: 1px solid ${hexToRgba(p.boxText, 0.22)}; border-radius: 6px; color: ${p.boxText};">
+${titleHtml}${bodyHtml}
+  </div>`
+        );
+      }
+    });
+
+    closePaper();
+
+    return `<div style="width: ${outputWidth}%; margin: 0 auto;">
+${out.join('\n\n')}
+</div>`;
+  }
+
+  function renderAll() {
+    const html = buildHtml();
+    outputEl.value = html;
+    previewEl.style.width = outputWidth + '%';
+
+    if (!html) {
+      previewEl.innerHTML = '<div class="empty">아직 미리볼 내용이 없습니다.</div>';
+      return;
+    }
+
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const wrapper = temp.firstElementChild;
+    previewEl.innerHTML = wrapper ? wrapper.innerHTML : html;
+  }
+
+  async function copyOutput() {
+    const text = outputEl.value;
+
+    if (!text) {
+      statusEl.textContent = '복사할 HTML이 없습니다.';
+      return;
+    }
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        outputEl.focus();
+        outputEl.select();
+        const ok = document.execCommand('copy');
+        outputEl.setSelectionRange(0, 0);
+        if (!ok) throw new Error('copy failed');
+      }
+
+      statusEl.textContent = 'HTML을 복사했습니다.';
+    } catch {
+      outputEl.focus();
+      outputEl.select();
+      statusEl.textContent = '자동 복사가 막혔습니다. 생성 HTML이 선택되었으니 직접 복사해 주세요.';
+    }
+  }
+
+  function downloadOutput() {
+    const fragment = outputEl.value;
+
+    if (!fragment) {
+      statusEl.textContent = '저장할 HTML이 없습니다.';
+      return;
+    }
+
+    const doc = `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>매거진 HTML</title>
+</head>
+<body>
+${fragment}
+</body>
+</html>`;
+
+    const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    a.href = url;
+    a.download = 'magazine-output.html';
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    statusEl.textContent = '완성 HTML 파일을 저장했습니다.';
+  }
+
+
+  document.querySelectorAll('[data-color-picker]').forEach(input => {
+    input.addEventListener('input', e => {
+      updateCustomColor(e.target.dataset.colorPicker, e.target.value);
+    });
+  });
+
+  document.querySelectorAll('[data-color-text]').forEach(input => {
+    input.addEventListener('change', e => {
+      const key = e.target.dataset.colorText;
+      updateCustomColor(key, normalizeHex(e.target.value, currentPalette[key]));
+    });
+  });
+
+  document.getElementById('savePaletteBtn').addEventListener('click', () => {
+    const name = paletteName.value.trim();
+
+    if (!name) {
+      statusEl.textContent = '저장할 팔레트 이름을 입력해 주세요.';
+      paletteName.focus();
+      return;
+    }
+
+    const saved = readSavedPalettes();
+    saved[name] = { ...clonePalette(currentPalette), name };
+    writeSavedPalettes(saved);
+    refreshSavedPaletteSelect();
+    savedPaletteSelect.value = name;
+    statusEl.textContent = `팔레트 “${name}”을 저장했습니다.`;
+  });
+
+  document.getElementById('loadPaletteBtn').addEventListener('click', () => {
+    const name = savedPaletteSelect.value;
+    if (!name) {
+      statusEl.textContent = '불러올 저장 팔레트가 없습니다.';
+      return;
+    }
+
+    const saved = readSavedPalettes();
+    if (!saved[name]) {
+      statusEl.textContent = '저장된 팔레트를 찾지 못했습니다.';
+      refreshSavedPaletteSelect();
+      return;
+    }
+
+    applyPalette(saved[name], null);
+    paletteName.value = name;
+    statusEl.textContent = `팔레트 “${name}”을 불러왔습니다.`;
+  });
+
+  document.getElementById('deletePaletteBtn').addEventListener('click', () => {
+    const name = savedPaletteSelect.value;
+    if (!name) {
+      statusEl.textContent = '삭제할 저장 팔레트가 없습니다.';
+      return;
+    }
+
+    const saved = readSavedPalettes();
+    delete saved[name];
+    writeSavedPalettes(saved);
+    refreshSavedPaletteSelect();
+    statusEl.textContent = `팔레트 “${name}”을 삭제했습니다.`;
+  });
+
+  widthRange.addEventListener('input', e => {
+    outputWidth = Math.max(55, Math.min(100, Number(e.target.value) || 100));
+    widthValue.textContent = outputWidth + '%';
+    localStorage.setItem(STORAGE_WIDTH, String(outputWidth));
+    renderAll();
+  });
+
+  document.getElementById('addPresetBtn').addEventListener('click', addPreset);
+
+  document.querySelectorAll('[data-add]').forEach(btn => {
+    btn.addEventListener('click', () => addBlock(btn.dataset.add));
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!state.length) return;
+    if (!confirm('모든 블록을 지울까요?')) return;
+
+    state.length = 0;
+    renderEditor();
+    renderAll();
+    statusEl.textContent = '초기화했습니다.';
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', copyOutput);
+  document.getElementById('downloadBtn').addEventListener('click', downloadOutput);
+
+  try {
+    const storedWidth = Number(localStorage.getItem(STORAGE_WIDTH));
+    if (Number.isFinite(storedWidth) && storedWidth >= 55 && storedWidth <= 100) {
+      outputWidth = storedWidth;
+    }
+  } catch {}
+
+  widthRange.value = outputWidth;
+  widthValue.textContent = outputWidth + '%';
+
+  renderPalettes();
+  syncColorControls();
+  refreshSavedPaletteSelect();
+  renderEditor();
+  renderAll();
+})();
+</script>
+</body>
+</html>
