@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Character Speech Profile Form</title>
+<style>
+  :root{
+    --bg:#f7f7f8;
+    --panel:#ffffff;
+    --text:#202124;
+    --muted:#6b7280;
+    --line:#d9dce1;
+    --soft:#f1f3f5;
+    --accent:#2f343b;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+    line-height:1.55;
+  }
+  .wrap{
+    width:min(920px, calc(100% - 28px));
+    margin:28px auto 80px;
+  }
+  header{
+    margin-bottom:18px;
+  }
+  h1{
+    margin:0 0 8px;
+    font-size:clamp(1.7rem,4vw,2.4rem);
+    line-height:1.18;
+  }
+  .lead{
+    margin:0;
+    color:var(--muted);
+    max-width:760px;
+  }
+  .toolbar{
+    position:sticky;
+    top:0;
+    z-index:20;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:12px 0;
+    background:linear-gradient(var(--bg) 82%, rgba(247,247,248,0));
+    backdrop-filter:blur(4px);
+  }
+  button{
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--text);
+    border-radius:10px;
+    padding:9px 13px;
+    font:inherit;
+    font-weight:650;
+    cursor:pointer;
+  }
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  button:hover{filter:brightness(.98)}
+  .section{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin:12px 0;
+  }
+  .field-head{
+    display:flex;
+    align-items:baseline;
+    gap:9px;
+    flex-wrap:wrap;
+    margin-bottom:4px;
+  }
+  .num{
+    color:var(--muted);
+    font-size:.86rem;
+    font-weight:700;
+  }
+  h2{
+    font-size:1.08rem;
+    margin:0;
+  }
+  .question{
+    margin:7px 0 8px;
+    font-weight:650;
+  }
+  .desc{
+    margin:0 0 10px;
+    color:var(--muted);
+    font-size:.94rem;
+  }
+  details{
+    margin:0 0 10px;
+    border-top:1px dashed var(--line);
+    padding-top:8px;
+  }
+  summary{
+    color:var(--muted);
+    cursor:pointer;
+    user-select:none;
+    font-size:.9rem;
+    font-weight:650;
+  }
+  .examples{
+    margin:8px 0 0;
+    padding-left:19px;
+    color:var(--muted);
+    font-size:.9rem;
+  }
+  textarea{
+    width:100%;
+    min-height:108px;
+    resize:vertical;
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:12px 13px;
+    background:#fff;
+    color:var(--text);
+    font:inherit;
+    line-height:1.55;
+    outline:none;
+  }
+  textarea:focus{
+    border-color:#9aa0a6;
+    box-shadow:0 0 0 3px rgba(60,64,67,.07);
+  }
+  .result{
+    margin-top:26px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    border-radius:var(--radius);
+    padding:18px;
+  }
+  .result h2{
+    font-size:1.25rem;
+    margin-bottom:8px;
+  }
+  .result p{
+    margin:0 0 12px;
+    color:var(--muted);
+    font-size:.93rem;
+  }
+  #output{
+    min-height:260px;
+    white-space:pre-wrap;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .result-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+  .status{
+    min-height:1.2em;
+    margin-top:8px;
+    color:var(--muted);
+    font-size:.86rem;
+  }
+  @media (max-width:640px){
+    .wrap{width:min(100% - 18px,920px); margin-top:16px}
+    .section,.result{padding:14px;border-radius:13px}
+    textarea{min-height:120px}
+    .toolbar{padding-top:8px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Character Speech Profile</h1>
+    <p class="lead">
+      캐릭터의 “말투”만이 아니라, 무엇을 알아차리고 어떻게 해석하며 무엇을 말할 가치가 있다고 여기는지를 적는 설문형 폼입니다.
+      모든 항목을 채울 필요는 없습니다. 비워둔 항목은 결과에서 자동으로 제외됩니다.
+    </p>
+  </header>
+
+  <div class="toolbar">
+    <button class="primary" id="jumpResult">결과 보기</button>
+    <button id="clearAll">전체 지우기</button>
+  </div>
+
+  <main id="form"></main>
+
+  <section class="result" id="resultSection">
+    <h2>결과</h2>
+    <p>아래 텍스트를 직접 다듬거나, 그대로 모델에게 가져가 영어 프로필 문장으로 재작성해 달라고 하면 됩니다.</p>
+    <textarea id="output" readonly placeholder="입력한 항목이 여기에 모입니다."></textarea>
+    <div class="result-actions">
+      <button class="primary" id="copyResult">결과 복사</button>
+      <button id="downloadResult">TXT 저장</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+</div>
+
+<script>
+const fields = [
+  {
+    name:"Perceptual Salience",
+    q:"이 캐릭터는 같은 상황에서 무엇을 먼저 알아차리는 편인가?",
+    d:"말하기 이전 단계의 주의 편향입니다. 사람의 감정, 위험, 시간, 위계, 물건의 상태, 우스운 점처럼 자꾸 눈에 걸리는 정보가 무엇인지 적어보세요.",
+    ex:["사람의 표정보다 실용적인 문제와 고장 난 물건을 먼저 본다.","누가 누구에게 무례했는지, 누가 대화에서 소외되는지를 빠르게 알아차린다.","모순되거나 우스운 디테일을 잘 발견한다."]
+  },
+  {
+    name:"Interpretive Habit",
+    q:"알아차린 정보를 보통 어떤 식으로 의미화하거나 해석하는가?",
+    d:"관찰 그 자체보다 그 관찰에 붙이는 기본 해석 습관을 적습니다.",
+    ex:["망설임을 불확실성보다 거절 의사로 읽는 편이다.","평범한 설명이 가능하면 숨은 의도를 잘 의심하지 않는다.","침묵을 불쾌감이나 거리두기의 신호로 쉽게 해석한다."]
+  },
+  {
+    name:"Characteristic Bias",
+    q:"이 캐릭터는 어떤 방향으로 반복해서 오해하거나 과대·과소평가하는가?",
+    d:"항상 정확한 인물이 되지 않게 해 주는 지속적인 추론 편향입니다.",
+    ex:["타인의 망설임을 무능으로 오해하기 쉽다.","호의를 실제보다 더 큰 애정으로 받아들이는 경향이 있다.","자신이 싫어하는 사람의 중립적인 행동도 악의적으로 해석한다."]
+  },
+  {
+    name:"Persistent Communicative Motives",
+    q:"이 캐릭터는 대화를 통해 반복적으로 무엇을 확보·보호·시험하려 하는가?",
+    d:"현재 장면의 1회성 목표가 아니라, 여러 대화에서 계속 영향을 주는 심리적 방향성입니다. 통제감, 확실성, 친밀감, 체면, 인정, 정보 우위, 갈등 회피/유지 등이 될 수 있습니다.",
+    ex:["상대에게 휘둘린다는 느낌을 싫어해 대화에서 자신의 자율성과 선택권을 유지하려 한다.","친밀한 관계에서는 상대가 자신을 여전히 받아주는지 은근히 확인하려는 경향이 있다.","모르는 상태를 불편해해 질문과 재확인으로 불확실성을 줄이려 한다."]
+  },
+  {
+    name:"Disclosure Policy",
+    q:"무엇을 쉽게 말하고, 무엇은 굳이 말하지 않거나 감추는가?",
+    d:"자신의 감정, 이유, 의도, 약점, 계획, 평가 등을 어느 정도까지 언어화하는지 적습니다.",
+    ex:["결론은 쉽게 말하지만 이유와 감정은 질문받기 전까지 잘 설명하지 않는다.","사건은 자세히 설명하지만 자신의 감정을 직접 이름 붙이는 데는 서툴다.","자기 계획을 미리 밝히는 것을 싫어한다."]
+  },
+  {
+    name:"Explanatory Threshold",
+    q:"얼마나 설명해야 ‘충분히 말했다’고 느끼는 편인가?",
+    d:"결론만 말하는지, 이유를 덧붙이는지, 상대가 이미 알 거라고 많이 가정하는지 등을 적습니다.",
+    ex:["공유된 맥락은 상대도 알고 있다고 강하게 가정해 설명을 자주 생략한다.","오해받는 것을 싫어해 요청받지 않아도 이유를 덧붙이는 편이다.","대체로 결론부터 말하고 반문을 받으면 그때 설명한다."]
+  },
+  {
+    name:"Conceptual Framing",
+    q:"경험과 관계를 어떤 종류의 개념으로 정리하는가?",
+    d:"감정, 행동, 관계, 도덕, 실용성, 권력, 체면처럼 이 캐릭터가 세상을 언어적으로 분류하는 기본 틀을 적습니다.",
+    ex:["관계를 감정보다 신뢰, 의무, 유용성, 배신의 언어로 이해한다.","갈등을 누가 누구를 상처 입혔는지와 감정적 의도로 해석한다.","사람 사이 문제를 주로 체면과 예의의 문제로 본다."]
+  },
+  {
+    name:"Lexical Field",
+    q:"어떤 의미 영역의 어휘를 자연스럽게 많이 선택하는가?",
+    d:"특정 유행어보다, 이 캐릭터가 자주 사용하는 개념군이나 단어의 성격을 적습니다.",
+    ex:["추상적인 감정어보다 구체적인 행동 동사를 많이 쓴다.","신뢰, 의무, 평판, 예의 같은 사회적 어휘를 자주 쓴다.","냄새, 온도, 소리, 질감 등 감각적인 표현을 잘 쓴다."]
+  },
+  {
+    name:"Figurative Language",
+    q:"비유·과장·말장난 같은 표현은 어떤 상황에서 어떤 방식으로 사용하는가?",
+    d:"단순히 ‘witty’라고 쓰기보다 비유의 재료와 조건을 적어보세요.",
+    ex:["비유를 거의 쓰지 않고 압박을 받을수록 더 문자적이고 평이하게 말한다.","친한 사람과의 공유된 기억을 농담의 재료로 쓴다.","과장된 비교를 좋아하지만 generic한 말장난은 거의 하지 않는다."]
+  },
+  {
+    name:"Humor Function",
+    q:"농담을 한다면, 보통 무엇을 위해 하는가?",
+    d:"친밀감 확인, 감정 회피, 긴장 완화, 공격, 자기방어, 놀이 등 농담의 심리적 기능을 적습니다.",
+    ex:["민망하거나 취약한 감정을 숨길 때 농담을 한다.","좋아하는 사람을 자기 편으로 받아들이는 방식으로 가볍게 놀린다.","갈등이 커질 것 같을 때 긴장을 낮추기 위해 웃긴 말을 한다."]
+  },
+  {
+    name:"Response Obligation",
+    q:"상대의 발화에 어느 정도까지 반드시 말로 답해야 한다고 느끼는가?",
+    d:"농담, 도발, 질문 등에 항상 반응하는지, 침묵이나 행동으로 넘기기도 하는지 적습니다.",
+    ex:["모든 말에 굳이 대답하지 않으며 농담은 표정이나 침묵으로 넘기는 경우가 많다.","도발적인 말은 거의 그냥 지나치지 않고 어떤 식으로든 받아친다.","질문에는 성실히 답하지만 잡담에는 verbal response가 적다."]
+  },
+  {
+    name:"Turn-Taking Style",
+    q:"대화의 리듬과 순서를 어떻게 다루는가?",
+    d:"끼어들기, 침묵 견디기, 질문 연속 사용, 상대 말을 끝까지 듣기 같은 패턴을 적습니다.",
+    ex:["상대가 말을 다 끝낼 때까지 기다린다.","이해했다고 생각하면 상대가 끝내기 전에 끼어드는 편이다.","침묵을 불편해하지 않고 굳이 메우려 하지 않는다."]
+  },
+  {
+    name:"Sentence Packaging",
+    q:"생각을 어떤 구조로 문장화하는 편인가?",
+    d:"짧음/장황함, 직설/완곡, 결론 우선/배경 우선, 완결문/단편 등의 경향을 적습니다.",
+    ex:["짧은 평서문과 결론 우선 구조를 선호한다.","생각이 정리되기 전에 말을 시작해 중간 수정과 덧붙임이 많다.","직접 명령하기보다 질문이나 제안 형태로 표현하는 편이다."]
+  },
+  {
+    name:"Repair Style",
+    q:"말하다가 표현을 고치거나 포기할 때 어떤 식으로 하는가?",
+    d:"자기수정, filler, 다시 시작하기, 말 끝 흐리기, 아예 포기하기 등의 경향을 적습니다.",
+    ex:["정확한 단어를 찾지 못하면 문장을 여러 번 고쳐 말한다.","한 번 말한 표현은 조금 부정확해도 잘 되돌리지 않는다.","민망해지면 말을 흐리거나 ‘됐어’ 하고 중단한다."]
+  },
+  {
+    name:"Emotional Modulation",
+    q:"감정 상태가 말하는 방식에 어떤 변화를 일으키는가?",
+    d:"평소 말투가 아니라, 화남·불안·애정·긴장 같은 상태에서 어떤 요소가 달라지는지 적습니다.",
+    ex:["화가 나면 문장이 짧아지고 비유와 농담이 사라진다.","불안할수록 질문과 확인이 늘어난다.","친밀한 상대에게는 설명이 줄고 생략과 shared shorthand가 늘어난다."]
+  },
+  {
+    name:"Relationship Modulation",
+    q:"상대와의 관계에 따라 어떤 부분이 달라지는가?",
+    d:"낯선 사람, 친구, 연인, 상사, 부하, 경쟁자처럼 관계별 register 차이를 적습니다.",
+    ex:["낯선 사람에게는 명확하고 정중하지만 친한 사람에게는 생략과 암시가 많다.","권위적인 상대 앞에서는 평소보다 지나치게 격식을 차린다.","자기보다 약한 사람에게는 오히려 말투가 부드러워진다."]
+  },
+  {
+    name:"Social Face Strategy",
+    q:"자기 체면과 상대의 체면을 어떻게 관리하는가?",
+    d:"민망함, 공개적인 지적, 사과, 거절, 갈등 상황에서 체면을 다루는 습관을 적습니다.",
+    ex:["사람을 공개적으로 망신 주는 것은 피하지만 사적인 자리에서는 매우 직설적이다.","자기 체면이 손상되면 농담으로 덮으려 한다.","상대가 체면을 잃는 것을 크게 신경 쓰지 않는다."]
+  },
+  {
+    name:"Verbal Aggression Style",
+    q:"말로 공격하거나 압박할 때 어떤 방식이 되는가?",
+    d:"욕설, 냉담한 사실 지적, 행동 비판, competence 공격, 질문으로 몰아붙이기, 침묵 등이 될 수 있습니다.",
+    ex:["사람 자체보다 그 사람이 한 구체적인 행동을 공격한다.","화가 나면 냉정한 사실과 모순을 하나씩 짚는 방식으로 압박한다.","직접적인 모욕보다 비꼬기와 질문으로 상대를 몰아붙인다."]
+  },
+  {
+    name:"Epistemic Speech",
+    q:"확실하지 않은 사실·추측·기억을 어떤 식으로 말하는가?",
+    d:"추측을 사실처럼 말하는지, hedge를 쓰는지, 모른다고 쉽게 인정하는지 등을 적습니다.",
+    ex:["감정적으로 확신하면 추측도 사실처럼 단정하는 경향이 있다.","본 것과 추측한 것을 명확히 구분해서 말한다.","모르는 상태를 인정하기보다 가능성이 높은 설명을 먼저 제시한다."]
+  },
+  {
+    name:"Characteristic Omissions",
+    q:"이 캐릭터가 유독 말하지 않는 것은 무엇인가?",
+    d:"감정, 사과, 칭찬, 계획, 불확실성, 과거, 애정처럼 의도적으로 또는 습관적으로 빠지는 정보를 적습니다.",
+    ex:["자신의 감정 상태를 스스로 요약해서 말하는 일이 거의 없다.","칭찬은 쉽게 하지만 사과는 매우 드물다.","자기 계획과 의도를 사전에 설명하지 않는다."]
+  }
+];
+
+const form = document.getElementById('form');
+
+function renderFields(){
+  form.innerHTML = fields.map((f,i)=>`
+    <section class="section">
+      <div class="field-head">
+        <span class="num">${String(i+1).padStart(2,'0')}</span>
+        <h2>${f.name}</h2>
+      </div>
+      <div class="question">${f.q}</div>
+      <p class="desc">${f.d}</p>
+      <details>
+        <summary>예시 보기</summary>
+        <ul class="examples">${f.ex.map(x=>`<li>${x}</li>`).join('')}</ul>
+      </details>
+      <textarea data-name="${f.name}" placeholder="한국어로 자유롭게 적어주세요."></textarea>
+    </section>
+  `).join('');
+}
+
+function buildOutput(){
+  const chunks = [];
+  document.querySelectorAll('textarea[data-name]').forEach(t=>{
+    const v = t.value.trim();
+    if(v) chunks.push(`${t.dataset.name}: ${v}`);
+  });
+  document.getElementById('output').value = chunks.join('\n\n');
+}
+
+renderFields();
+document.addEventListener('input', e=>{
+  if(e.target.matches('textarea[data-name]')) buildOutput();
+});
+
+document.getElementById('jumpResult').onclick=()=>{
+  buildOutput();
+  document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'start'});
+};
+
+document.getElementById('clearAll').onclick=()=>{
+  if(!confirm('작성한 내용을 모두 지울까요?')) return;
+  document.querySelectorAll('textarea[data-name]').forEach(t=>t.value='');
+  buildOutput();
+};
+
+document.getElementById('copyResult').onclick=async()=>{
+  buildOutput();
+  const out=document.getElementById('output').value;
+  if(!out){ document.getElementById('status').textContent='복사할 내용이 없습니다.'; return; }
+  try{
+    await navigator.clipboard.writeText(out);
+    document.getElementById('status').textContent='결과를 복사했습니다.';
+  }catch{
+    document.getElementById('output').select();
+    document.execCommand('copy');
+    document.getElementById('status').textContent='결과를 복사했습니다.';
+  }
+};
+
+document.getElementById('downloadResult').onclick=()=>{
+  buildOutput();
+  const out=document.getElementById('output').value;
+  if(!out){ document.getElementById('status').textContent='저장할 내용이 없습니다.'; return; }
+  const blob=new Blob([out],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='character-speech-profile.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),500);
+};
+
+buildOutput();
+</script>
+</body>
+</html>
