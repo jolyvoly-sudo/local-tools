@@ -579,7 +579,7 @@
       대분류는 하나의 그룹을 만들고, 그 아래에는 본문 블록만 배치합니다.
       본문 안에서 /중, /소, /접…//접, /박…//박 명령으로 편집 요소를 바로 삽입할 수 있습니다.
       기존 Markdown의 **볼드**, *이탤릭*, `인라인 코드`, ```코드블럭```, 표에 더해 큰따옴표·작은따옴표·인용 블럭(> )·순서/비순서 리스트 렌더링도 선택적으로 사용할 수 있습니다.
-      팔레트, 지면 폭(px), 지면 전체 정렬도 직접 조절할 수 있습니다.
+      팔레트, 지면 폭(px), 지면 전체 정렬도 직접 조절할 수 있습니다. 생성 HTML은 본문 공통 타이포그래피를 상위 지면에 한 번만 선언합니다.
     </p>
   </section>
 
@@ -596,10 +596,10 @@
 
         <div class="width-row">
           <div>
-            <span class="field-label">지면 폭 (px)</span>
+            <span class="field-label">최대 지면 폭 (px)</span>
             <input id="widthRange" type="range" min="320" max="1000" step="10" value="720">
           </div>
-          <input id="widthNumber" type="number" min="320" max="1000" step="10" value="720" aria-label="지면 폭 px">
+          <input id="widthNumber" type="number" min="320" max="1000" step="10" value="720" aria-label="최대 지면 폭 px">
         </div>
 
         <div style="margin-top: 12px;">
@@ -654,8 +654,10 @@
           <div class="typography-settings">
             <label class="dropcap-row">
               <input type="checkbox" id="toggleDropCap">
-              <span>첫 문단 드롭캡 (2줄 랩)</span>
+              <span>첫 문단 드롭캡 (반응형)</span>
             </label>
+
+            <p class="desc" style="font-size:12px;">첫 글자는 두 줄 높이로 강조하고, 본문은 화면 폭에 맞춰 자연스럽게 이어집니다.</p>
 
             <div class="typography-row">
               <div>
@@ -763,6 +765,7 @@
     <section class="panel">
       <div class="panel-title">
         <h2>미리보기</h2>
+        <span style="font-size:12px;">화면 폭에 맞춰 자동 줄바꿈</span>
       </div>
 
       <div class="preview-wrap">
@@ -945,66 +948,6 @@
     return String(typographyOptions.bodyLineHeight);
   }
 
-  function splitHtmlAtTextOffset(html, offset) {
-    const container = document.createElement('div');
-    container.innerHTML = String(html || '');
-
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_TEXT
-    );
-
-    let remaining = Math.max(0, offset);
-    let targetNode = null;
-    let targetOffset = 0;
-    let node;
-
-    while ((node = walker.nextNode())) {
-      if (remaining <= node.data.length) {
-        targetNode = node;
-        targetOffset = remaining;
-        break;
-      }
-
-      remaining -= node.data.length;
-    }
-
-    if (!targetNode) {
-      return {
-        before: container.innerHTML,
-        after: ''
-      };
-    }
-
-    // Avoid splitting a surrogate pair.
-    if (
-      targetOffset > 0 &&
-      targetOffset < targetNode.data.length &&
-      /[\uD800-\uDBFF]/.test(targetNode.data.charAt(targetOffset - 1))
-    ) {
-      targetOffset += 1;
-    }
-
-    const beforeRange = document.createRange();
-    beforeRange.setStart(container, 0);
-    beforeRange.setEnd(targetNode, targetOffset);
-
-    const afterRange = document.createRange();
-    afterRange.setStart(targetNode, targetOffset);
-    afterRange.setEnd(container, container.childNodes.length);
-
-    const beforeHolder = document.createElement('div');
-    const afterHolder = document.createElement('div');
-
-    beforeHolder.appendChild(beforeRange.cloneContents());
-    afterHolder.appendChild(afterRange.cloneContents());
-
-    return {
-      before: beforeHolder.innerHTML,
-      after: afterHolder.innerHTML
-    };
-  }
-
   function extractDropCapParts(html) {
     const container = document.createElement('div');
     container.innerHTML = String(html || '');
@@ -1021,95 +964,93 @@
       if (!match) continue;
 
       const charIndex = match.index;
-      const first = node.data.slice(charIndex, charIndex + 1);
+      const tail = node.data.slice(charIndex);
+      const first = typeof Intl.Segmenter === 'function'
+        ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(tail)[Symbol.iterator]().next().value.segment
+        : Array.from(tail)[0] || '';
       node.data =
         node.data.slice(0, charIndex) +
         node.data.slice(charIndex + first.length);
 
       return {
         first,
-        remainderHtml: container.innerHTML,
-        remainderText: container.textContent || ''
+        remainderHtml: container.innerHTML
       };
     }
 
     return {
       first: '',
-      remainderHtml: container.innerHTML,
-      remainderText: container.textContent || ''
+      remainderHtml: container.innerHTML
     };
   }
 
-  function measureDropCapLeadOffset(text) {
-    const plain = String(text || '');
-    if (!plain.trim()) return 0;
-
-    const fontSize = typographyOptions.bodyFontSize;
-    const lineHeight = typographyOptions.bodyLineHeight;
-    const dropCapSize = Math.round(fontSize * 2.8);
-    const dropCapWidth = Math.round(dropCapSize + fontSize * 0.45);
-
-    // Final output paper has 24px horizontal padding on both sides.
-    const paperWidth = Math.max(180, outputWidth - 48);
-    const leadWidth = Math.max(100, paperWidth - dropCapWidth);
-
+  function makeDropCapMeasureRoot(width) {
     const measure = document.createElement('div');
+
     measure.style.position = 'absolute';
     measure.style.visibility = 'hidden';
     measure.style.pointerEvents = 'none';
-    measure.style.left = '-99999px';
+    measure.style.left = '-100000px';
     measure.style.top = '0';
-    measure.style.width = `${leadWidth}px`;
+    measure.style.width = `${Math.max(1, width)}px`;
     measure.style.margin = '0';
     measure.style.padding = '0';
     measure.style.border = '0';
-    measure.style.fontSize = `${fontSize}px`;
-    measure.style.lineHeight = String(lineHeight);
-    measure.style.fontFamily = getFontFamily('body') || 'sans-serif';
+    measure.style.fontSize = `${typographyOptions.bodyFontSize}px`;
+    measure.style.lineHeight = String(typographyOptions.bodyLineHeight);
+    measure.style.fontFamily = dropCapFontFamily();
     measure.style.fontWeight = 'normal';
+    measure.style.fontStyle = 'normal';
+    measure.style.letterSpacing = 'normal';
+    measure.style.wordSpacing = 'normal';
     measure.style.whiteSpace = 'normal';
     measure.style.wordBreak = 'normal';
+    measure.style.textAlign = 'left';
 
     document.body.appendChild(measure);
+    return measure;
+  }
 
-    const maxHeight = fontSize * lineHeight * 2 + 2;
+  function dropCapFontFamily() {
+    return getFontFamily('body') || getComputedStyle(document.body).fontFamily;
+  }
 
-    let low = 0;
-    let high = plain.length;
-    let best = 0;
-
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      measure.textContent = plain.slice(0, mid);
-
-      if (measure.getBoundingClientRect().height <= maxHeight) {
-        best = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
-
+  function measureDropCapGlyph(first) {
+    const fontSize = typographyOptions.bodyFontSize;
+    const lineHeight = fontSize * typographyOptions.bodyLineHeight;
+    const family = dropCapFontFamily();
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context) return { size: fontSize * 2.8, offset: 0, height: lineHeight * 2 };
+    const reference = /[\u3000-\u9fff\uac00-\ud7af]/u.test(first) ? '한' : 'H';
+    context.font = `${fontSize}px ${family}`;
+    const body = context.measureText(reference);
+    context.font = `bold 100px ${family}`;
+    const sample = context.measureText(first);
+    const inkHeight = sample.actualBoundingBoxAscent + sample.actualBoundingBoxDescent;
+    const bodyInk = body.actualBoundingBoxAscent + body.actualBoundingBoxDescent;
+    // Ink top aligns with line 1; ink bottom with line 2's reference glyph.
+    const size = Math.round(Math.min(fontSize * 5, (lineHeight + bodyInk) / Math.max(0.1, inkHeight / 100)) * 100) / 100;
+    context.font = `bold ${size}px ${family}`;
+    const cap = context.measureText(first);
+    const measure = makeDropCapMeasureRoot(500);
+    const baselineAt = (text, px, height, bold) => {
+      measure.style.fontSize = `${px}px`;
+      measure.style.lineHeight = `${height}px`;
+      measure.style.fontWeight = bold ? 'bold' : 'normal';
+      measure.textContent = text;
+      const marker = document.createElement('span');
+      marker.style.cssText = 'display:inline-block;width:0;height:0;padding:0;margin:0;vertical-align:baseline;';
+      measure.appendChild(marker);
+      return marker.getBoundingClientRect().top - measure.getBoundingClientRect().top;
+    };
+    const bodyBaseline = baselineAt(reference, fontSize, lineHeight, false);
+    const capBaseline = baselineAt(first, size, size, true);
+    const offset = bodyBaseline - body.actualBoundingBoxAscent - capBaseline + cap.actualBoundingBoxAscent;
     measure.remove();
-
-    if (best <= 0 || best >= plain.length) {
-      return best;
-    }
-
-    // Prefer a nearby natural break instead of slicing a word.
-    const lookBackStart = Math.max(0, best - 28);
-    const nearby = plain.slice(lookBackStart, best);
-    const whitespace = Math.max(
-      nearby.lastIndexOf(' '),
-      nearby.lastIndexOf('\n'),
-      nearby.lastIndexOf('\t')
-    );
-
-    if (whitespace >= 0 && best - (lookBackStart + whitespace) <= 20) {
-      best = lookBackStart + whitespace + 1;
-    }
-
-    return best;
+    return {
+      size, offset,
+      height: lineHeight * 2
+    };
   }
 
   function applyDropCapToHtml(html) {
@@ -1117,30 +1058,18 @@
 
     const parts = extractDropCapParts(html);
     if (!parts.first) return html;
+    const glyph = measureDropCapGlyph(parts.first);
+    const gap = Math.max(6, typographyOptions.bodyFontSize * 0.42);
+    const family = escapeHtml(dropCapFontFamily());
 
-    const dropCapSize = Math.round(typographyOptions.bodyFontSize * 2.8);
-    const dropCapWidth = Math.round(
-      dropCapSize + typographyOptions.bodyFontSize * 0.45
-    );
-
-    const leadOffset = measureDropCapLeadOffset(parts.remainderText);
-    const split = splitHtmlAtTextOffset(parts.remainderHtml, leadOffset);
-
-    const firstHtml = escapeHtml(parts.first);
-    const leadHtml = split.before || '&nbsp;';
-    const restHtml = split.after.trim();
-
-    const top =
-      `<span style="display: inline-flex; width: 100%; vertical-align: top;">` +
-        `<span style="display: inline-block; width: ${dropCapWidth}px; font-size: ${dropCapSize}px; font-weight: bold; line-height: 0.82; vertical-align: top;">${firstHtml}</span>` +
-        `<span style="display: inline-block; width: calc(100% - ${dropCapWidth}px); vertical-align: top;">${leadHtml}</span>` +
-      `</span>`;
-
-    if (!restHtml) {
-      return top;
-    }
-
-    return `${top}<br><span style="display: inline-block; width: 100%;">${restHtml}</span>`;
+    // A float lets the browser reflow the entire remainder at any viewport width.
+    // This inline-block establishes a formatting context so even a one-letter
+    // paragraph contains its float and does not indent the following paragraph.
+    // A tiny height tolerance prevents rounding from excluding the third line.
+    return `<span style="display: inline-block; width: 100%; vertical-align: top; font-family: ${family};">` +
+      `<span style="float: left; height: ${(glyph.height - 0.5).toFixed(2)}px; margin: 0 ${gap.toFixed(2)}px 0 0; line-height: 0;">` +
+        `<span style="display: inline-block; font-size: ${glyph.size}px; font-weight: bold; line-height: 1; margin-top: ${glyph.offset.toFixed(2)}px;">${escapeHtml(parts.first)}</span>` +
+      `</span>${parts.remainderHtml}</span>`;
   }
 
   function sanitizeFontFamily(value) {
@@ -1686,7 +1615,7 @@
       return `${indent}    <tr>\n${cells}\n${indent}    </tr>`;
     }).join('\n');
 
-    return `${indent}<table style="border-collapse: collapse; width: 100%; margin: ${margin}; color: inherit; font-size: 1em; line-height: 1.55;">
+    return `${indent}<table style="border-collapse: collapse; width: 100%; margin: ${margin}; line-height: 1.55;">
 ${indent}  <thead>
 ${indent}    <tr>
 ${headerCells}
@@ -1731,14 +1660,14 @@ ${indent}</table>`;
           .map(item => `${indent}  <li style="margin: 0 0 5px;">${item}</li>`)
           .join('\n');
 
-        return `${indent}<${tag} style="margin: ${margin}; padding-left: 1.6em; font-size: 1em; line-height: 1.75;">\n${items}\n${indent}</${tag}>`;
+        return `${indent}<${tag} style="margin: ${margin}; padding-left: 1.6em; line-height: 1.75;">\n${items}\n${indent}</${tag}>`;
       }
 
       if (block.type === 'blockquote') {
         const quoteHtml = renderMarkdownBlockHtml(
           block.text,
-          'margin: 0 0 10px; font-size: 1em; line-height: 1.8;',
-          'margin: 0; font-size: 1em; line-height: 1.8;',
+          'margin: 0 0 10px; line-height: 1.8;',
+          'margin: 0; line-height: 1.8;',
           codeStyle,
           `${indent}  `,
           {
@@ -1748,7 +1677,7 @@ ${indent}</table>`;
             margin: '0 0 10px',
             lastMargin: '0'
           }
-        ) || `${indent}  <p style="margin: 0; font-size: 1em; line-height: 1.8;">&nbsp;</p>`;
+        ) || `${indent}  <p style="margin: 0; line-height: 1.8;">&nbsp;</p>`;
 
         const quoteBg = hexToRgba(currentPalette.sectionText, 0.34);
         const quoteBorder = hexToRgba(currentPalette.sectionText, 0.78);
@@ -1973,7 +1902,7 @@ ${indent}</table>`;
     blocks.forEach(block => {
       if (block.type === 'middle') {
         out.push(
-`  <div style="margin: 0 0 20px; padding: 0 0 11px; border-bottom: 2px solid ${p.sectionBg};${fontStyle('title')}">
+`  <div style="margin: 0 0 20px; padding: 0 0 11px; border-bottom: 2px solid ${p.sectionBg}; font-size: 16px; line-height: normal;${fontStyle('title')}">
     <span style="font-size: 0.72em; font-weight: bold; letter-spacing: 3px; color: ${p.sectionBg}; text-transform: uppercase;">TOPIC</span>
     <br>
     <span style="font-size: 1.32em; font-weight: bold; line-height: 1.4;">${displayText(block.title, '중분류 제목')}</span>
@@ -1984,7 +1913,7 @@ ${indent}</table>`;
 
       if (block.type === 'subtitle') {
         out.push(
-`  <p style="margin: 0 0 10px; font-size: 1.12em; font-weight: bold; line-height: 1.45;${fontStyle('title')}">${displayText(block.title, '소제목')}</p>`
+`  <p style="margin: 0 0 10px; font-size: 18px; font-weight: bold; line-height: 1.45;${fontStyle('title')}">${displayText(block.title, '소제목')}</p>`
         );
         return;
       }
@@ -1992,18 +1921,18 @@ ${indent}</table>`;
       if (block.type === 'details') {
         const detailContent = renderMarkdownBlockHtml(
           block.text,
-          `margin: 0 0 12px; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};`,
-          `margin: 0; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};`,
+          'margin: 0 0 12px;',
+          'margin: 0;',
           `margin: 0; padding: 13px 14px; background: ${hexToRgba(p.detailsText, 0.10)}; border-radius: 6px; color: ${p.detailsText}; font-family: monospace; font-size: 0.94em; line-height: 1.65;`,
           '      ',
           bodyCommandTableTheme('details', p),
           { dropCap: false }
-        ) || '      <p style="margin: 0; font-size: 1em; line-height: 1.85;">&nbsp;</p>';
+        ) || '      <p style="margin: 0;">&nbsp;</p>';
 
         out.push(
 `  <div style="margin: 0 0 24px;">
     <details>
-      <summary style="padding: 11px 14px; background: ${p.detailsBg}; color: ${p.detailsText}; border-radius: 6px; font-weight: bold; line-height: 1.5;${fontStyle('title')}">${displayText(block.title, '접기 제목')}</summary>
+      <summary style="padding: 11px 14px; background: ${p.detailsBg}; color: ${p.detailsText}; border-radius: 6px; font-size: 16px; font-weight: bold; line-height: 1.5;${fontStyle('title')}">${displayText(block.title, '접기 제목')}</summary>
       <div style="padding: 15px 16px; background: ${hexToRgba(p.detailsBg, 0.28)}; border: 1px solid ${hexToRgba(p.detailsText, 0.18)}; border-top: none; border-radius: 0 0 6px 6px; color: ${p.detailsText};">
 ${detailContent}
       </div>
@@ -2015,18 +1944,18 @@ ${detailContent}
 
       if (block.type === 'box') {
         const titleHtml = block.title
-          ? `    <p style="margin: 0 0 8px; font-size: 1.02em; font-weight: bold; line-height: 1.45;${fontStyle('title')}">${escapeHtml(block.title)}</p>\n`
+          ? `    <p style="margin: 0 0 8px; font-size: 16px; font-weight: bold; line-height: 1.45;${fontStyle('title')}">${escapeHtml(block.title)}</p>\n`
           : '';
 
         const bodyHtml = renderMarkdownBlockHtml(
           block.text,
-          `margin: 0 0 10px; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};`,
-          `margin: 0; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};`,
+          'margin: 0 0 10px; line-height: 1.75;',
+          'margin: 0; line-height: 1.75;',
           `margin: 0; padding: 12px 13px; background: ${hexToRgba(p.boxText, 0.10)}; border-radius: 5px; color: ${p.boxText}; font-family: monospace; font-size: 0.94em; line-height: 1.65;`,
           '    ',
           bodyCommandTableTheme('box', p),
           { dropCap: false }
-        ) || '    <p style="margin: 0; font-size: 1em; line-height: 1.75;">&nbsp;</p>';
+        ) || '    <p style="margin: 0; line-height: 1.75;">&nbsp;</p>';
 
         out.push(
 `  <div style="margin: 0 0 24px; padding: 15px 16px; background: ${p.boxBg}; border: 1px solid ${hexToRgba(p.boxText, 0.22)}; border-radius: 6px; color: ${p.boxText};">
@@ -2038,8 +1967,8 @@ ${titleHtml}${bodyHtml}
 
       const markdownHtml = renderMarkdownBlockHtml(
         block.text,
-        `margin: 0 0 12px; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};`,
-        `margin: 0 0 24px; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};`,
+        'margin: 0 0 12px;',
+        'margin: 0 0 24px;',
         `margin: 0 0 24px; padding: 14px 15px; background: ${hexToRgba(p.bodyText, 0.10)}; border-radius: 6px; color: ${p.bodyText}; font-family: monospace; font-size: 0.94em; line-height: 1.65;`,
         '  ',
         bodyCommandTableTheme('body', p),
@@ -2543,7 +2472,7 @@ ${titleHtml}${bodyHtml}
 
     function openPaper() {
       if (paperOpen) return;
-      out.push(`<div style="background: ${p.paperBg}; padding: 26px 24px; color: ${p.bodyText};${fontStyle('body')}">`);
+      out.push(`<div style="background: ${p.paperBg}; padding: 26px 24px; color: ${p.bodyText}; font-size: ${bodyFontSizeCss()}; line-height: ${bodyLineHeightCss()};${fontStyle('body')}">`);
       paperOpen = true;
     }
 
@@ -2582,15 +2511,15 @@ ${titleHtml}${bodyHtml}
 
     closePaper();
 
-    return `<div style="width: ${outputWidth}px; margin: ${getOutputMargin()};">\n${out.join('\n\n')}\n</div>`;
+    return `<div style="width: clamp(0px, 100%, ${outputWidth}px); margin: ${getOutputMargin()};">\n${out.join('\n\n')}\n</div>`;
   }
 
   function renderAll() {
     const html = buildHtml();
     outputEl.value = html;
 
-    previewEl.style.width = Math.min(outputWidth, previewEl.parentElement.clientWidth) + 'px';
-    previewEl.style.maxWidth = '100%';
+    previewEl.style.width = '100%';
+    previewEl.style.maxWidth = outputWidth + 'px';
 
     if (outputAlignment === 'left') {
       previewEl.style.margin = '0 auto 0 0';
@@ -2944,6 +2873,10 @@ ${fragment}
   refreshSavedPaletteSelect();
   renderEditor();
   renderAll();
+  if (document.fonts) {
+    document.fonts.ready.then(renderAll);
+    document.fonts.addEventListener('loadingdone', renderAll);
+  }
 })();
 </script>
 </body>
