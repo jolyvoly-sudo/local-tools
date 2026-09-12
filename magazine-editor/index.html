@@ -662,9 +662,9 @@
             <div class="typography-row">
               <div>
                 <label class="field-label" for="bodyFontSizeRange">본문 글자 크기 (px)</label>
-                <input id="bodyFontSizeRange" type="range" min="12" max="28" step="1" value="16">
+                <input id="bodyFontSizeRange" type="range" min="12" max="28" step="0.1" value="16">
               </div>
-              <input id="bodyFontSizeNumber" type="number" min="12" max="28" step="1" value="16" aria-label="본문 글자 크기 px">
+              <input id="bodyFontSizeNumber" type="number" min="12" max="28" step="0.1" value="16" aria-label="본문 글자 크기 px">
             </div>
 
             <div class="typography-row">
@@ -728,6 +728,21 @@
           <div class="color-field"><label>접기 글자</label><div class="color-row"><input type="color" data-color-picker="detailsText"><input type="text" data-color-text="detailsText" maxlength="7"></div></div>
           <div class="color-field"><label>박스 배경</label><div class="color-row"><input type="color" data-color-picker="boxBg"><input type="text" data-color-text="boxBg" maxlength="7"></div></div>
           <div class="color-field"><label>박스 글자</label><div class="color-row"><input type="color" data-color-picker="boxText"><input type="text" data-color-text="boxText" maxlength="7"></div></div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <span class="field-label">따옴표 배경 불투명도 (0~1)</span>
+          <p class="desc" style="font-size:12px;">0 완전 투명 · 1 불투명. 현재 선택한 스타일의 값을 조절하며, 스타일별 값이 팔레트에 함께 저장됩니다.</p>
+          <label for="doubleQuoteTransparency">큰따옴표 · <span id="doubleQuoteTransparencyStyle"></span></label>
+          <div class="typography-row">
+            <input type="range" min="0" max="1" step="0.01" data-quote-transparency="double" aria-label="큰따옴표 배경 불투명도 슬라이더">
+            <input id="doubleQuoteTransparency" type="number" min="0" max="1" step="0.01" data-quote-transparency="double" aria-label="큰따옴표 배경 불투명도 소수값">
+          </div>
+          <label for="singleQuoteTransparency">작은따옴표 · <span id="singleQuoteTransparencyStyle"></span></label>
+          <div class="typography-row">
+            <input type="range" min="0" max="1" step="0.01" data-quote-transparency="single" aria-label="작은따옴표 배경 불투명도 슬라이더">
+            <input id="singleQuoteTransparency" type="number" min="0" max="1" step="0.01" data-quote-transparency="single" aria-label="작은따옴표 배경 불투명도 소수값">
+          </div>
         </div>
 
         <div class="save-row">
@@ -857,7 +872,7 @@
     }
   };
 
-  let currentPalette = JSON.parse(JSON.stringify(palettes.classic));
+  let currentPalette = clonePalette(palettes.classic);
   let currentPresetKey = 'classic';
   let outputWidth = 720;
   let outputAlignment = 'center';
@@ -1108,7 +1123,35 @@
   }
 
   function clonePalette(p) {
-    return JSON.parse(JSON.stringify(p));
+    const copy = JSON.parse(JSON.stringify(p));
+    const defaults = { flat: 0.52, marker: 0.40, paper: 0.58 };
+    const saved = copy.quoteBackgroundOpacity;
+    copy.quoteBackgroundOpacity = {};
+    for (const kind of ['double', 'single']) {
+      copy.quoteBackgroundOpacity[kind] = {};
+      for (const [style, fallback] of Object.entries(defaults)) {
+        const value = saved?.[kind]?.[style];
+        copy.quoteBackgroundOpacity[kind][style] = typeof value === 'number' && Number.isFinite(value)
+          ? Math.max(0, Math.min(1, value)) : fallback;
+      }
+    }
+    return copy;
+  }
+
+  function quoteStyleName(kind) {
+    const style = kind === 'double' ? renderOptions.doubleQuoteStyle : renderOptions.singleQuoteStyle;
+    return ['flat', 'marker', 'paper'].includes(style) ? style : 'flat';
+  }
+
+  function syncQuoteTransparencyControls() {
+    document.querySelectorAll('[data-quote-transparency]').forEach(input => {
+      const kind = input.dataset.quoteTransparency;
+      input.value = currentPalette.quoteBackgroundOpacity[kind][quoteStyleName(kind)];
+    });
+    const labels = { flat: '플랫 스트립', marker: '형광펜 스트립', paper: '종이 조각' };
+    for (const kind of ['double', 'single']) {
+      document.getElementById(`${kind}QuoteTransparencyStyle`).textContent = labels[quoteStyleName(kind)];
+    }
   }
 
   function normalizeHex(value, fallback = '#000000') {
@@ -1126,6 +1169,7 @@
   }
 
   function syncColorControls() {
+    syncQuoteTransparencyControls();
     document.querySelectorAll('[data-color-picker]').forEach(input => {
       const key = input.dataset.colorPicker;
       input.value = normalizeHex(currentPalette[key], '#000000');
@@ -1232,15 +1276,14 @@
   }
 
   function getQuoteSpanStyle(kind) {
-    const styleName = kind === 'double'
-      ? renderOptions.doubleQuoteStyle
-      : renderOptions.singleQuoteStyle;
+    const styleName = quoteStyleName(kind);
+    const alpha = currentPalette.quoteBackgroundOpacity[kind][styleName];
 
     const textColor = currentPalette.bodyText;
-    const fillStrong = hexToRgba(currentPalette.sectionText, 0.52);
-    const fillSoft = hexToRgba(currentPalette.sectionText, 0.40);
-    const paperFill = hexToRgba(currentPalette.sectionText, 0.58);
-    const paperShadow = hexToRgba('#FFFFFF', 0.24);
+    const fillStrong = hexToRgba(currentPalette.sectionText, alpha);
+    const fillSoft = hexToRgba(currentPalette.sectionText, alpha);
+    const paperFill = hexToRgba(currentPalette.sectionText, alpha);
+    const paperShadow = hexToRgba('#FFFFFF', Number((0.24 * alpha / 0.58).toFixed(4)));
 
     const base = [
       'display: inline',
@@ -2616,6 +2659,26 @@ ${fragment}
     });
   });
 
+  document.querySelectorAll('[data-quote-transparency]').forEach(input => {
+    input.addEventListener('input', () => {
+      if (input.value.trim() === '') return;
+      const value = Number(input.value);
+      if (!Number.isFinite(value)) return;
+      const alpha = Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+      const kind = input.dataset.quoteTransparency;
+      currentPalette.quoteBackgroundOpacity[kind][quoteStyleName(kind)] = alpha;
+      currentPresetKey = null;
+      // Leave the active number field intact while typing a decimal value.
+      document.querySelectorAll('[data-quote-transparency]').forEach(peer => {
+        if (peer !== input && peer.dataset.quoteTransparency === kind) peer.value = alpha;
+      });
+      renderPalettes();
+      renderAll();
+    });
+    input.addEventListener('change', syncQuoteTransparencyControls);
+    input.addEventListener('blur', syncQuoteTransparencyControls);
+  });
+
   document.getElementById('savePaletteBtn').addEventListener('click', () => {
     const name = paletteName.value.trim();
 
@@ -2726,6 +2789,7 @@ ${fragment}
   ].forEach(([select, key]) => {
     select.addEventListener('change', () => {
       renderOptions[key] = select.value;
+      syncQuoteTransparencyControls();
       saveRenderOptions();
       renderAll();
     });
@@ -2762,8 +2826,8 @@ ${fragment}
 
   function setBodyFontSize(value) {
     typographyOptions.bodyFontSize = Math.round(
-      clampNumber(value, 12, 28, 16)
-    );
+      clampNumber(value, 12, 28, 16) * 10
+    ) / 10;
 
     bodyFontSizeRange.value = typographyOptions.bodyFontSize;
     bodyFontSizeNumber.value = typographyOptions.bodyFontSize;
@@ -2836,7 +2900,7 @@ ${fragment}
 
       const storedBodyFontSize = Number(parsedTypography.bodyFontSize);
       const migratedBodyFontSize = Number.isFinite(storedBodyFontSize) && storedBodyFontSize < 10
-        ? Math.round(storedBodyFontSize * 16)
+        ? Math.round(storedBodyFontSize * 16 * 10) / 10
         : storedBodyFontSize;
 
       typographyOptions = {
